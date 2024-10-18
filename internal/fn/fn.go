@@ -59,3 +59,12 @@ func ValidateFn(fn any) error {
 	}
 	return nil
 }
+
+func InitArgument(fn any) any {
+	// fn must be pre-validated by ValidateFn first
+	fnType := reflect.TypeOf(fn)
+	argumentField := fnType.In(1)
+	argumentFieldStructType := argumentField.Elem()
+	ptr := reflect.New(argumentFieldStructType)
+	return ptr.Interface()
+}

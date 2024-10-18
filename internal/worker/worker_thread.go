@@ -55,8 +55,10 @@ func (w *WorkerThread[T, R]) Run(ctx context.Context) {
 				}
 				w.bo.BackOff()
 			} else {
-				w.processTask(ctx, task)
-				w.bo.Reset()
+				err = w.processTask(ctx, task)
+				if err == nil {
+					w.bo.Reset()
+				}
 			}
 			t := time.NewTimer(w.bo.GetBackOffInterval())
 			select {
@@ -71,7 +73,8 @@ func (w *WorkerThread[T, R]) Run(ctx context.Context) {
 	}
 }
 
-func (w *WorkerThread[T, R]) processTask(ctx context.Context, task T) {
+func (w *WorkerThread[T, R]) processTask(ctx context.Context, task *T) error {
+	var err error
 	result, err := w.taskProcessor.ProcessTask(ctx, task)
 	if err != nil {
 		log.Err(err).
@@ -97,4 +100,5 @@ func (w *WorkerThread[T, R]) processTask(ctx context.Context, task T) {
 			}
 		}
 	}
+	return err
 }

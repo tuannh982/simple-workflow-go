@@ -2,6 +2,7 @@ package fn
 
 import (
 	"context"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -39,4 +40,11 @@ func TestValidateFn(t *testing.T) {
 	assert.Error(t, ValidateFn(fn8))
 	assert.Error(t, ValidateFn(fn9))
 	assert.Error(t, ValidateFn(fn10))
+}
+
+func TestInitArgument(t *testing.T) {
+	ptr := InitArgument(fn3)
+	_, ok := ptr.(*input)
+	assert.True(t, ok)
+	fmt.Println(ptr)
 }

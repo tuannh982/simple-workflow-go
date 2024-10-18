@@ -21,7 +21,6 @@ type WorkflowExecutionStarted struct {
 }
 
 type WorkflowExecutionCompleted struct {
-	Status string
 	dto.ExecutionResult
 }
 

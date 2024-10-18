@@ -7,7 +7,6 @@ import (
 
 type ActivityTask struct {
 	WorkflowID        string
-	TaskID            int32 // event ID of the activity task scheduled event
 	TaskScheduleEvent *history.ActivityScheduled
 }
 
