@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/tuannh982/simple-workflows-go/internal/activity"
 	"github.com/tuannh982/simple-workflows-go/internal/dataconverter"
 	"github.com/tuannh982/simple-workflows-go/internal/dto"
 	"github.com/tuannh982/simple-workflows-go/internal/dto/history"
@@ -146,9 +145,9 @@ func (w *WorkflowRuntime) processEvent(event *history.HistoryEvent) error {
 	Workflow execution
 */
 
-func (w *WorkflowRuntime) executeWorkflow(workflow Workflow, ctx context.Context, input any) (*history.WorkflowExecutionCompleted, error) {
+func (w *WorkflowRuntime) executeWorkflow(workflow any, ctx context.Context, input any) (*history.WorkflowExecutionCompleted, error) {
 	var err error
-	workflowResult, workflowErr := workflow(ctx, input)
+	workflowResult, workflowErr := fn.CallFn(workflow, ctx, input)
 	var marshaledWorkflowResult *[]byte
 	var wrappedWorkflowError *dto.Error
 	if workflowErr != nil {
@@ -233,7 +232,7 @@ func (w *WorkflowRuntime) handleWorkflowTaskStarted(event *history.HistoryEvent)
 	Activity
 */
 
-func (w *WorkflowRuntime) ScheduleNewActivity(activity activity.Activity, input any) *ActivityPromise {
+func (w *WorkflowRuntime) ScheduleNewActivity(activity any, input any) *ActivityPromise {
 	promise := NewActivityPromise(w)
 	taskScheduledID := w.nextSeqNo()
 	name := fn.GetFunctionName(activity)

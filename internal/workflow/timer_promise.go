@@ -2,10 +2,6 @@ package workflow
 
 import "github.com/tuannh982/simple-workflows-go/internal/promise"
 
-type AwaitableTimer interface {
-	Await() error
-}
-
 type TimerPromise struct {
 	WorkflowRuntime *WorkflowRuntime
 	Promise         *promise.Promise[struct{}]

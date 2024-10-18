@@ -6,16 +6,16 @@ import (
 )
 
 type WorkflowRegistry struct {
-	workflows map[string]Workflow
+	workflows map[string]any
 }
 
 func NewWorkflowRegistry() *WorkflowRegistry {
 	return &WorkflowRegistry{
-		workflows: make(map[string]Workflow),
+		workflows: make(map[string]any),
 	}
 }
 
-func (a *WorkflowRegistry) RegisterActivity(workflow Workflow) error {
+func (a *WorkflowRegistry) RegisterWorkflow(workflow any) error {
 	if err := fn.ValidateFn(workflow); err != nil {
 		panic(err)
 	}

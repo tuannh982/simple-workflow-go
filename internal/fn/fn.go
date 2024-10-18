@@ -68,3 +68,21 @@ func InitArgument(fn any) any {
 	ptr := reflect.New(argumentFieldStructType)
 	return ptr.Interface()
 }
+
+func InitResult(fn any) any {
+	// fn must be pre-validated by ValidateFn first
+	fnType := reflect.TypeOf(fn)
+	argumentField := fnType.Out(0)
+	argumentFieldStructType := argumentField.Elem()
+	ptr := reflect.New(argumentFieldStructType)
+	return ptr.Interface()
+}
+
+func CallFn(fn any, ctx context.Context, input any) (any, error) {
+	fnValue := reflect.ValueOf(fn)
+	results := fnValue.Call([]reflect.Value{
+		reflect.ValueOf(ctx),
+		reflect.ValueOf(input),
+	})
+	return results[0].Interface(), results[1].Interface().(error)
+}

@@ -2,6 +2,7 @@ package fn
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -47,4 +48,17 @@ func TestInitArgument(t *testing.T) {
 	_, ok := ptr.(*input)
 	assert.True(t, ok)
 	fmt.Println(ptr)
+}
+
+type fnCallInput struct{ Msg string }
+
+type fnCallResult struct{ Result string }
+
+func fnCall(_ context.Context, input *fnCallInput) (*fnCallResult, error) {
+	return &fnCallResult{Result: input.Msg}, errors.New("error")
+}
+
+func TestCallFn(t *testing.T) {
+	r, err := CallFn(fnCall, context.TODO(), &fnCallInput{Msg: "hello"})
+	fmt.Println(r, err)
 }

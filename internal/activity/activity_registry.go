@@ -6,16 +6,16 @@ import (
 )
 
 type ActivityRegistry struct {
-	activities map[string]Activity
+	activities map[string]any
 }
 
 func NewActivityRegistry() *ActivityRegistry {
 	return &ActivityRegistry{
-		activities: make(map[string]Activity),
+		activities: make(map[string]any),
 	}
 }
 
-func (a *ActivityRegistry) RegisterActivity(activity Activity) error {
+func (a *ActivityRegistry) RegisterActivity(activity any) error {
 	if err := fn.ValidateFn(activity); err != nil {
 		panic(err)
 	}

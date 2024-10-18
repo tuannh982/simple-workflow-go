@@ -4,10 +4,6 @@ import (
 	"github.com/tuannh982/simple-workflows-go/internal/promise"
 )
 
-type AwaitableActivity interface {
-	Await(vPtr any) error
-}
-
 type ActivityPromise struct {
 	WorkflowRuntime *WorkflowRuntime
 	Promise         *promise.Promise[[]byte]

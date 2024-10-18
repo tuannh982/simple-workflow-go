@@ -28,9 +28,9 @@ func NewActivityTaskExecutor(
 	}
 }
 
-func (a *activityTaskExecutor) executeActivity(activity Activity, ctx context.Context, input any) (*dto.ExecutionResult, error) {
+func (a *activityTaskExecutor) executeActivity(activity any, ctx context.Context, input any) (*dto.ExecutionResult, error) {
 	var err error
-	activityResult, activityErr := activity(ctx, input)
+	activityResult, activityErr := fn.CallFn(activity, ctx, input)
 	var marshaledActivityResult *[]byte
 	var wrappedActivityError *dto.Error
 	if activityErr != nil {
