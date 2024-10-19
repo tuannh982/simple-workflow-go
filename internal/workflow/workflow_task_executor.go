@@ -31,7 +31,6 @@ func (w *workflowTaskExecutor) augmentWorkflowTaskEvents(t *task.WorkflowTask) [
 	augmentedNewEvents := make([]*history.HistoryEvent, 0, l+1)
 	if t.NewEvents[0].WorkflowTaskStarted == nil {
 		augmentedNewEvents = append(augmentedNewEvents, &history.HistoryEvent{
-			EventID:             -1,
 			Timestamp:           t.FetchTimestamp,
 			WorkflowTaskStarted: &history.WorkflowTaskStarted{},
 		})

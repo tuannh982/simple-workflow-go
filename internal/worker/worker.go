@@ -3,7 +3,7 @@ package worker
 import (
 	"context"
 	"fmt"
-	"github.com/tuannh982/simple-workflows-go/internal/backoff"
+	"github.com/tuannh982/simple-workflows-go/pkg/utils/backoff"
 	"sync"
 	"time"
 )

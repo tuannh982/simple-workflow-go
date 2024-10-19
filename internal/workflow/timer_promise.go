@@ -1,6 +1,8 @@
 package workflow
 
-import "github.com/tuannh982/simple-workflows-go/internal/promise"
+import (
+	"github.com/tuannh982/simple-workflows-go/pkg/utils/promise"
+)
 
 type TimerPromise struct {
 	WorkflowRuntime *WorkflowRuntime
@@ -24,9 +26,9 @@ func (a *TimerPromise) Await() error {
 				return nil
 			}
 		} else {
-			done, unexpectedErr := a.WorkflowRuntime.Step()
-			if unexpectedErr != nil {
-				panic(unexpectedErr)
+			done, unExpectedErr := a.WorkflowRuntime.Step()
+			if unExpectedErr != nil {
+				panic(unExpectedErr)
 			}
 			if done {
 				break

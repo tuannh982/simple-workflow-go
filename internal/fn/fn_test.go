@@ -3,7 +3,6 @@ package fn
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -16,8 +15,8 @@ func (t *fn2Struct) fn2(_ any) (any, error) { return nil, nil }
 
 func TestGetFunctionName(t *testing.T) {
 	tfn2 := &fn2Struct{}
-	assert.Equal(t, GetFunctionName(fn1), "fn1")
-	assert.Equal(t, GetFunctionName(tfn2.fn2), "fn2")
+	assert.Equal(t, "fn1", GetFunctionName(fn1))
+	assert.Equal(t, "fn2", GetFunctionName(tfn2.fn2))
 }
 
 type input struct{}
@@ -47,18 +46,30 @@ func TestInitArgument(t *testing.T) {
 	ptr := InitArgument(fn3)
 	_, ok := ptr.(*input)
 	assert.True(t, ok)
-	fmt.Println(ptr)
 }
 
-type fnCallInput struct{ Msg string }
+type fnCallInput struct {
+	Msg string
+	Err string
+}
 
 type fnCallResult struct{ Result string }
 
 func fnCall(_ context.Context, input *fnCallInput) (*fnCallResult, error) {
-	return &fnCallResult{Result: input.Msg}, errors.New("error")
+	return &fnCallResult{Result: input.Msg}, errors.New(input.Err)
 }
 
 func TestCallFn(t *testing.T) {
-	r, err := CallFn(fnCall, context.TODO(), &fnCallInput{Msg: "hello"})
-	fmt.Println(r, err)
+	inputMsg := "hello world"
+	inputErr := "bye world"
+	r, err := CallFn(fnCall, context.TODO(), &fnCallInput{
+		Msg: inputMsg,
+		Err: inputErr,
+	})
+	assert.NotNil(t, r)
+	assert.NotNil(t, err)
+	castedResult, ok := r.(*fnCallResult)
+	assert.True(t, ok)
+	assert.Equal(t, inputMsg, castedResult.Result)
+	assert.Equal(t, inputErr, err.Error())
 }

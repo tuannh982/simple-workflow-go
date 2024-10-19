@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -9,9 +10,11 @@ import (
 	"github.com/tuannh982/simple-workflows-go/internal/dto/history"
 	"github.com/tuannh982/simple-workflows-go/internal/dto/task"
 	"github.com/tuannh982/simple-workflows-go/internal/fn"
+	"runtime/debug"
 )
 
 var ErrControlledPanic = errors.New("controlled panic")
+var ErrNonDeterministicError = errors.New("non-deterministic error")
 
 type WorkflowRuntime struct {
 	// init
@@ -45,7 +48,7 @@ func NewWorkflowRuntime(
 		Task:                    task,
 		HistoryIndex:            0,
 		IsReplaying:             true,
-		SequenceNo:              0,
+		SequenceNo:              1, // avoid 0
 		ActivityScheduledEvents: make(map[int32]*history.ActivityScheduled),
 		ActivityPromises:        make(map[int32]*ActivityPromise),
 		TimerCreatedEvents:      make(map[int32]*history.TimerCreated),
@@ -74,14 +77,14 @@ func (w *WorkflowRuntime) RunSimulation() (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if r != ErrControlledPanic {
-				err = fmt.Errorf("panic: %v", r)
+				err = fmt.Errorf("panic: %v\nstack: %s", r, string(debug.Stack()))
 			}
 		}
 	}()
 	for {
-		done, unexpectedErr := w.Step()
-		if unexpectedErr != nil {
-			return unexpectedErr
+		done, unExpectedErr := w.Step()
+		if unExpectedErr != nil {
+			return unExpectedErr
 		}
 		if done {
 			break
@@ -145,28 +148,21 @@ func (w *WorkflowRuntime) processEvent(event *history.HistoryEvent) error {
 	Workflow execution
 */
 
-func (w *WorkflowRuntime) executeWorkflow(workflow any, ctx context.Context, input any) (*history.WorkflowExecutionCompleted, error) {
-	var err error
-	workflowResult, workflowErr := fn.CallFn(workflow, ctx, input)
-	var marshaledWorkflowResult *[]byte
-	var wrappedWorkflowError *dto.Error
-	if workflowErr != nil {
-		wrappedWorkflowError = &dto.Error{
-			Message: workflowErr.Error(),
-		}
+func (w *WorkflowRuntime) executeWorkflow(
+	workflow any,
+	ctx context.Context,
+	input any,
+) (workflowExecutionCompleted *history.WorkflowExecutionCompleted, err error) {
+	callResult, callErr := fn.CallFn(workflow, ctx, input)
+	marshaledCallResult, err := dto.ExtractResultFromFnCallResult(callResult, w.DataConverter.Marshal)
+	if err != nil {
+		return nil, err
 	}
-	if workflowResult != nil {
-		var r []byte
-		r, err = w.DataConverter.Marshal(workflowResult)
-		marshaledWorkflowResult = &r
-		if err != nil {
-			return nil, err
-		}
-	}
+	wrappedCallError := dto.ExtractErrorFromFnCallError(callErr)
 	return &history.WorkflowExecutionCompleted{
 		ExecutionResult: dto.ExecutionResult{
-			Result: marshaledWorkflowResult,
-			Error:  wrappedWorkflowError,
+			Result: marshaledCallResult,
+			Error:  wrappedCallError,
 		},
 	}, nil
 }
@@ -176,7 +172,7 @@ func (w *WorkflowRuntime) handleWorkflowExecutionStarted(event *history.HistoryE
 		w.WorkflowExecutionStartedEvent = event
 		name := e.Name
 		inputBytes := e.Input
-		if workflow, ok := w.WorkflowRegistry.workflows[name]; ok {
+		if workflow, ok := w.WorkflowRegistry.Workflows[name]; ok {
 			ctx := InjectWorkflowExecutionContext(context.Background(), NewWorkflowExecutionContext(w))
 			input := fn.InitArgument(workflow)
 			err := w.DataConverter.Unmarshal(inputBytes, input)
@@ -233,17 +229,17 @@ func (w *WorkflowRuntime) handleWorkflowTaskStarted(event *history.HistoryEvent)
 */
 
 func (w *WorkflowRuntime) ScheduleNewActivity(activity any, input any) *ActivityPromise {
-	promise := NewActivityPromise(w)
+	promise := NewActivityPromise(w, activity)
 	taskScheduledID := w.nextSeqNo()
 	name := fn.GetFunctionName(activity)
-	bytes, err := w.DataConverter.Marshal(input)
+	inputBytes, err := w.DataConverter.Marshal(input)
 	if err != nil {
 		panic(err)
 	}
 	event := &history.ActivityScheduled{
 		TaskScheduledID: taskScheduledID,
 		Name:            name,
-		Input:           bytes,
+		Input:           inputBytes,
 	}
 	w.ActivityScheduledEvents[taskScheduledID] = event
 	w.ActivityPromises[taskScheduledID] = promise
@@ -252,10 +248,14 @@ func (w *WorkflowRuntime) ScheduleNewActivity(activity any, input any) *Activity
 
 func (w *WorkflowRuntime) handleActivityScheduled(event *history.HistoryEvent) error {
 	if e := event.ActivityScheduled; e != nil {
-		if _, ok := w.ActivityScheduledEvents[e.TaskScheduledID]; !ok {
+		if activityScheduled, ok := w.ActivityScheduledEvents[e.TaskScheduledID]; ok {
+			if activityScheduled.Name != e.Name || !bytes.Equal(activityScheduled.Input, e.Input) {
+				return ErrNonDeterministicError
+			}
+			delete(w.ActivityScheduledEvents, e.TaskScheduledID)
+		} else {
 			return fmt.Errorf("activity scheduled event not found %v", e)
 		}
-		delete(w.ActivityScheduledEvents, e.TaskScheduledID)
 		return nil
 	} else {
 		return fmt.Errorf("expect ActivityScheduled event, got %v", e)
@@ -298,10 +298,14 @@ func (w *WorkflowRuntime) CreateTimer(fireAt int64) *TimerPromise {
 
 func (w *WorkflowRuntime) handleTimerCreated(event *history.HistoryEvent) error {
 	if e := event.TimerCreated; e != nil {
-		if _, ok := w.TimerCreatedEvents[e.TimerID]; !ok {
+		if timerCreated, ok := w.TimerCreatedEvents[e.TimerID]; ok {
+			if timerCreated.FireAt != e.FireAt {
+				return ErrNonDeterministicError
+			}
+			delete(w.TimerCreatedEvents, e.TimerID)
+		} else {
 			return fmt.Errorf("timer created event not found %v", e)
 		}
-		delete(w.TimerCreatedEvents, e.TimerID)
 		return nil
 	} else {
 		return fmt.Errorf("expect TimerCreated event, got %v", e)

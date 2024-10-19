@@ -7,6 +7,7 @@ import (
 	"github.com/tuannh982/simple-workflows-go/internal/dto"
 	"github.com/tuannh982/simple-workflows-go/internal/dto/task"
 	"github.com/tuannh982/simple-workflows-go/internal/fn"
+	"runtime/debug"
 )
 
 type ActivityTaskExecutor interface {
@@ -28,34 +29,32 @@ func NewActivityTaskExecutor(
 	}
 }
 
-func (a *activityTaskExecutor) executeActivity(activity any, ctx context.Context, input any) (*dto.ExecutionResult, error) {
-	var err error
-	activityResult, activityErr := fn.CallFn(activity, ctx, input)
-	var marshaledActivityResult *[]byte
-	var wrappedActivityError *dto.Error
-	if activityErr != nil {
-		wrappedActivityError = &dto.Error{
-			Message: activityErr.Error(),
+func (a *activityTaskExecutor) executeActivity(
+	activity any,
+	ctx context.Context,
+	input any,
+) (executionResult *dto.ExecutionResult, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic: %v\nstack: %s", r, string(debug.Stack()))
 		}
+	}()
+	callResult, callErr := fn.CallFn(activity, ctx, input)
+	marshaledCallResult, err := dto.ExtractResultFromFnCallResult(callResult, a.DataConverter.Marshal)
+	if err != nil {
+		return nil, err
 	}
-	if activityResult != nil {
-		var r []byte
-		r, err = a.DataConverter.Marshal(activityResult)
-		marshaledActivityResult = &r
-		if err != nil {
-			return nil, err
-		}
-	}
+	wrappedCallError := dto.ExtractErrorFromFnCallError(callErr)
 	return &dto.ExecutionResult{
-		Result: marshaledActivityResult,
-		Error:  wrappedActivityError,
+		Result: marshaledCallResult,
+		Error:  wrappedCallError,
 	}, nil
 }
 
 func (a *activityTaskExecutor) Execute(t *task.ActivityTask) (*task.ActivityTaskResult, error) {
 	name := t.TaskScheduleEvent.Name
 	inputBytes := t.TaskScheduleEvent.Input
-	if activity, ok := a.ActivityRegistry.activities[name]; ok {
+	if activity, ok := a.ActivityRegistry.Activities[name]; ok {
 		ctx := InjectActivityExecutionContext(context.Background(), NewActivityExecutionContext())
 		input := fn.InitArgument(activity)
 		err := a.DataConverter.Unmarshal(inputBytes, input)

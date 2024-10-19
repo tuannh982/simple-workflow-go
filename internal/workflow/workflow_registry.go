@@ -6,12 +6,12 @@ import (
 )
 
 type WorkflowRegistry struct {
-	workflows map[string]any
+	Workflows map[string]any
 }
 
 func NewWorkflowRegistry() *WorkflowRegistry {
 	return &WorkflowRegistry{
-		workflows: make(map[string]any),
+		Workflows: make(map[string]any),
 	}
 }
 
@@ -20,9 +20,9 @@ func (a *WorkflowRegistry) RegisterWorkflow(workflow any) error {
 		panic(err)
 	}
 	name := fn.GetFunctionName(workflow)
-	if _, ok := a.workflows[name]; ok {
+	if _, ok := a.Workflows[name]; ok {
 		return fmt.Errorf("workflow '%s' already registered", name)
 	}
-	a.workflows[name] = workflow
+	a.Workflows[name] = workflow
 	return nil
 }

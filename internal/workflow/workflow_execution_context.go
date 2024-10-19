@@ -1,6 +1,8 @@
 package workflow
 
-import "context"
+import (
+	"context"
+)
 
 type WorkflowExecutionContext struct {
 	WorkflowRuntime *WorkflowRuntime

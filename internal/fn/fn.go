@@ -32,6 +32,7 @@ func ValidateStructPtr(tpe reflect.Type) error {
 	return nil
 }
 
+// ValidateFn validation function, will only success if fn has signature of func(context.Context, any) (any, error)
 func ValidateFn(fn any) error {
 	var err error
 	fnType := reflect.TypeOf(fn)
@@ -60,8 +61,8 @@ func ValidateFn(fn any) error {
 	return nil
 }
 
+// InitArgument init argument struct of fn, fn must have signature of func(context.Context, any) (any, error)
 func InitArgument(fn any) any {
-	// fn must be pre-validated by ValidateFn first
 	fnType := reflect.TypeOf(fn)
 	argumentField := fnType.In(1)
 	argumentFieldStructType := argumentField.Elem()
@@ -69,6 +70,7 @@ func InitArgument(fn any) any {
 	return ptr.Interface()
 }
 
+// InitResult init result struct of fn, fn must have signature of func(context.Context, any) (any, error)
 func InitResult(fn any) any {
 	// fn must be pre-validated by ValidateFn first
 	fnType := reflect.TypeOf(fn)
@@ -78,11 +80,26 @@ func InitResult(fn any) any {
 	return ptr.Interface()
 }
 
+// CallFn execute function fn without validations, fn must have signature of func(context.Context, any) (any, error)
 func CallFn(fn any, ctx context.Context, input any) (any, error) {
 	fnValue := reflect.ValueOf(fn)
 	results := fnValue.Call([]reflect.Value{
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(input),
 	})
-	return results[0].Interface(), results[1].Interface().(error)
+	r := results[0]
+	e := results[1]
+	if r.IsNil() {
+		if e.IsNil() {
+			return nil, nil
+		} else {
+			return nil, e.Interface().(error)
+		}
+	} else {
+		if e.IsNil() {
+			return r.Interface(), nil
+		} else {
+			return r.Interface(), e.Interface().(error)
+		}
+	}
 }

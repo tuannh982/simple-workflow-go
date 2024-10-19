@@ -3,8 +3,11 @@ package worker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/rs/zerolog/log"
-	"github.com/tuannh982/simple-workflows-go/internal/backoff"
+	"github.com/tuannh982/simple-workflows-go/pkg/utils/backoff"
+	"github.com/tuannh982/simple-workflows-go/pkg/utils/ptr"
+	"runtime/debug"
 	"sync"
 	"time"
 )
@@ -32,10 +35,11 @@ func NewWorkerThread[T any, R any](
 
 func (w *WorkerThread[T, R]) Run(ctx context.Context) {
 	defer w.wg.Done()
+loop:
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			break loop
 		default:
 			log.Debug().
 				Str("worker_thread", w.name).
@@ -55,32 +59,32 @@ func (w *WorkerThread[T, R]) Run(ctx context.Context) {
 				}
 				w.bo.BackOff()
 			} else {
-				err = w.processTask(ctx, task)
-				if err == nil {
-					w.bo.Reset()
+				if err = w.processTask(ctx, task); err != nil {
+					log.Err(err).
+						Str("worker_thread", w.name).
+						Msg("error while processing task")
 				}
+				w.bo.Reset()
 			}
-			t := time.NewTimer(w.bo.GetBackOffInterval())
-			select {
-			case <-ctx.Done():
-				if !t.Stop() {
-					<-t.C
-				}
-				return
-			case <-t.C:
+			if done := w.waitFor(ctx, w.bo.GetBackOffDuration()); done {
+				break loop
 			}
 		}
 	}
 }
 
-func (w *WorkerThread[T, R]) processTask(ctx context.Context, task *T) error {
-	var err error
+func (w *WorkerThread[T, R]) processTask(ctx context.Context, task *T) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic: %v\nstack: %s", r, string(debug.Stack()))
+		}
+	}()
 	result, err := w.taskProcessor.ProcessTask(ctx, task)
 	if err != nil {
 		log.Err(err).
 			Str("worker_thread", w.name).
 			Msg("error while processing task")
-		err = w.taskProcessor.AbandonTask(ctx, task)
+		err = w.taskProcessor.AbandonTask(ctx, task, ptr.Ptr(err.Error()))
 		if err != nil {
 			log.Err(err).
 				Str("worker_thread", w.name).
@@ -92,7 +96,7 @@ func (w *WorkerThread[T, R]) processTask(ctx context.Context, task *T) error {
 			log.Err(err).
 				Str("worker_thread", w.name).
 				Msg("error while completing task")
-			err = w.taskProcessor.AbandonTask(ctx, task)
+			err = w.taskProcessor.AbandonTask(ctx, task, nil)
 			if err != nil {
 				log.Err(err).
 					Str("worker_thread", w.name).
@@ -101,4 +105,17 @@ func (w *WorkerThread[T, R]) processTask(ctx context.Context, task *T) error {
 		}
 	}
 	return err
+}
+
+func (w *WorkerThread[T, R]) waitFor(ctx context.Context, duration time.Duration) bool {
+	t := time.NewTimer(duration)
+	select {
+	case <-ctx.Done():
+		if !t.Stop() {
+			<-t.C
+		}
+		return true
+	case <-t.C:
+		return false
+	}
 }

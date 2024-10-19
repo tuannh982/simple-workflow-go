@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/tuannh982/simple-workflows-go/api"
 	"github.com/tuannh982/simple-workflows-go/internal/activity"
 	"github.com/tuannh982/simple-workflows-go/internal/dataconverter"
 	"github.com/tuannh982/simple-workflows-go/internal/workflow"
+	"github.com/tuannh982/simple-workflows-go/pkg/api"
 )
 
 type HelloActivityInput struct {
@@ -32,7 +32,7 @@ type HelloWorkflowResult struct {
 }
 
 func HelloWorkflow(ctx context.Context, input *HelloWorkflowInput) (*HelloWorkflowResult, error) {
-	result, err := api.StartActivity(ctx, HelloActivity, &HelloActivityInput{From: input.From}).Await()
+	result, err := api.CallActivity(ctx, HelloActivity, &HelloActivityInput{From: input.From}).Await()
 	if err != nil {
 		panic(err)
 	}
@@ -41,8 +41,8 @@ func HelloWorkflow(ctx context.Context, input *HelloWorkflowInput) (*HelloWorkfl
 
 func main() {
 	dataConverter := dataconverter.NewJsonDataConverter()
-	acvitityRegistry := activity.NewActivityRegistry()
-	_ = acvitityRegistry.RegisterActivity(HelloActivity)
+	activityRegistry := activity.NewActivityRegistry()
+	_ = activityRegistry.RegisterActivity(HelloActivity)
 	workflowRegistry := workflow.NewWorkflowRegistry()
 	_ = workflowRegistry.RegisterWorkflow(HelloWorkflow)
 	_ = dataConverter

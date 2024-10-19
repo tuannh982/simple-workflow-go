@@ -2,6 +2,9 @@ package worker
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 )
@@ -11,9 +14,15 @@ type mockTaskResult struct{}
 
 type mockTaskProcessor struct {
 	numTasks int
+	process  func(ctx context.Context, task *mockTask) (*mockTaskResult, error)
+	complete func(ctx context.Context, result *mockTaskResult) error
+	abandon  func(ctx context.Context, task *mockTask, reason *string) error
+	sync.Mutex
 }
 
 func (m *mockTaskProcessor) GetTask(ctx context.Context) (*mockTask, error) {
+	m.Lock()
+	defer m.Unlock()
 	if m.numTasks > 0 {
 		m.numTasks--
 		return &mockTask{}, nil
@@ -23,25 +32,84 @@ func (m *mockTaskProcessor) GetTask(ctx context.Context) (*mockTask, error) {
 }
 
 func (m *mockTaskProcessor) ProcessTask(ctx context.Context, task *mockTask) (*mockTaskResult, error) {
-	time.Sleep(2 * time.Second)
-	return &mockTaskResult{}, nil
+	return m.process(ctx, task)
 }
 
 func (m *mockTaskProcessor) CompleteTask(ctx context.Context, result *mockTaskResult) error {
-	return nil
+	return m.complete(ctx, result)
 }
 
-func (m *mockTaskProcessor) AbandonTask(ctx context.Context, task *mockTask) error {
-	return nil
+func (m *mockTaskProcessor) AbandonTask(ctx context.Context, task *mockTask, reason *string) error {
+	return m.abandon(ctx, task, reason)
 }
 
-func TestWorkerDrainingStop(t *testing.T) {
+func TestWorkerDraining(t *testing.T) {
 	taskProcessor := &mockTaskProcessor{
 		numTasks: 10,
+		process: func(ctx context.Context, task *mockTask) (*mockTaskResult, error) {
+			time.Sleep(2 * time.Second)
+			return &mockTaskResult{}, nil
+		},
+		complete: func(ctx context.Context, result *mockTaskResult) error {
+			return nil
+		},
+		abandon: func(ctx context.Context, task *mockTask, reason *string) error {
+			return nil
+		},
 	}
-	worker := NewWorker("worker", taskProcessor, WithMaxConcurrentTasksLimit(3))
+	w := NewWorker("worker", taskProcessor, WithMaxConcurrentTasksLimit(3))
 	ctx := context.Background()
-	worker.Start(ctx)
+	w.Start(ctx)
 	time.Sleep(10 * time.Second)
-	worker.Stop(ctx)
+	w.Stop(ctx)
+}
+
+func TestProcessError(t *testing.T) {
+	taskProcessor := &mockTaskProcessor{
+		numTasks: 10,
+		process: func(ctx context.Context, task *mockTask) (*mockTaskResult, error) {
+			return nil, errors.New("always error")
+		},
+		complete: func(ctx context.Context, result *mockTaskResult) error {
+			return nil
+		},
+		abandon: func(ctx context.Context, task *mockTask, reason *string) error {
+			fmt.Printf("%v\n", reason)
+			return nil
+		},
+	}
+	w := NewWorker("worker", taskProcessor, WithMaxConcurrentTasksLimit(1))
+	ctx := context.Background()
+	w.Start(ctx)
+	time.Sleep(5 * time.Second)
+	w.Stop(ctx)
+}
+
+func TestPanicProcessor(t *testing.T) {
+	taskProcessor := &mockTaskProcessor{
+		numTasks: 5,
+		process: func(ctx context.Context, task *mockTask) (*mockTaskResult, error) {
+			return &mockTaskResult{}, nil
+		},
+		complete: func(ctx context.Context, result *mockTaskResult) error {
+			panic("panicked")
+		},
+		abandon: func(ctx context.Context, task *mockTask, reason *string) error {
+			panic("panicked")
+		},
+	}
+	w := NewWorker("worker", taskProcessor, WithMaxConcurrentTasksLimit(1))
+	ctx := context.Background()
+	w.Start(ctx)
+	time.Sleep(3 * time.Second)
+	w.Stop(ctx)
+	//
+	taskProcessor.process = func(ctx context.Context, task *mockTask) (*mockTaskResult, error) {
+		return nil, errors.New("always error")
+	}
+	w = NewWorker("worker", taskProcessor, WithMaxConcurrentTasksLimit(1))
+	ctx = context.Background()
+	w.Start(ctx)
+	time.Sleep(3 * time.Second)
+	w.Stop(ctx)
 }

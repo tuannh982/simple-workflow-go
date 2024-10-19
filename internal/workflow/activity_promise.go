@@ -1,40 +1,44 @@
 package workflow
 
 import (
-	"github.com/tuannh982/simple-workflows-go/internal/promise"
+	"github.com/tuannh982/simple-workflows-go/internal/fn"
+	"github.com/tuannh982/simple-workflows-go/pkg/utils/promise"
 )
 
 type ActivityPromise struct {
 	WorkflowRuntime *WorkflowRuntime
+	Activity        any
 	Promise         *promise.Promise[[]byte]
 }
 
-func NewActivityPromise(runtime *WorkflowRuntime) *ActivityPromise {
+func NewActivityPromise(runtime *WorkflowRuntime, activity any) *ActivityPromise {
 	p := promise.NewPromise[[]byte]()
 	return &ActivityPromise{
 		WorkflowRuntime: runtime,
+		Activity:        activity,
 		Promise:         p,
 	}
 }
 
-func (a *ActivityPromise) Await(vPtr any) error {
+func (a *ActivityPromise) Await() (any, error) {
 	for {
 		if a.Promise.IsDone() {
-			if a.Promise.Error() != nil {
-				return a.Promise.Error()
-			} else {
-				var bytes []byte
-				if a.Promise.Value() != nil {
-					bytes = *a.Promise.Value()
-				} else {
-					bytes = []byte{}
+			err := a.Promise.Error()
+			if a.Promise.Value() != nil {
+				ptr := fn.InitResult(a.Activity)
+				bytes := *a.Promise.Value()
+				unExpectedErr := a.WorkflowRuntime.DataConverter.Unmarshal(bytes, ptr)
+				if unExpectedErr != nil {
+					panic(unExpectedErr)
 				}
-				return a.WorkflowRuntime.DataConverter.Unmarshal(bytes, vPtr)
+				return ptr, err
+			} else {
+				return nil, err
 			}
 		} else {
-			done, unexpectedErr := a.WorkflowRuntime.Step()
-			if unexpectedErr != nil {
-				panic(unexpectedErr)
+			done, unExpectedErr := a.WorkflowRuntime.Step()
+			if unExpectedErr != nil {
+				panic(unExpectedErr)
 			}
 			if done {
 				break
