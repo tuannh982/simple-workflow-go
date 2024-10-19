@@ -1,4 +1,4 @@
-package workflow
+package registry
 
 import (
 	"fmt"
@@ -24,5 +24,14 @@ func (a *WorkflowRegistry) RegisterWorkflow(workflow any) error {
 		return fmt.Errorf("workflow '%s' already registered", name)
 	}
 	a.Workflows[name] = workflow
+	return nil
+}
+
+func (a *WorkflowRegistry) RegisterWorkflows(workflows ...any) error {
+	for _, workflow := range workflows {
+		if err := a.RegisterWorkflow(workflow); err != nil {
+			return err
+		}
+	}
 	return nil
 }

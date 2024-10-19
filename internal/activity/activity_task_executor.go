@@ -3,24 +3,25 @@ package activity
 import (
 	"context"
 	"fmt"
-	"github.com/tuannh982/simple-workflows-go/internal/dataconverter"
-	"github.com/tuannh982/simple-workflows-go/internal/dto"
-	"github.com/tuannh982/simple-workflows-go/internal/dto/task"
 	"github.com/tuannh982/simple-workflows-go/internal/fn"
+	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflows-go/pkg/dto"
+	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflows-go/pkg/registry"
 	"runtime/debug"
 )
 
 type ActivityTaskExecutor interface {
-	Execute(task *task.ActivityTask) (*task.ActivityTaskResult, error)
+	Execute(ctx context.Context, task *task.ActivityTask) (*task.ActivityTaskResult, error)
 }
 
 type activityTaskExecutor struct {
-	ActivityRegistry *ActivityRegistry
+	ActivityRegistry *registry.ActivityRegistry
 	DataConverter    dataconverter.DataConverter
 }
 
 func NewActivityTaskExecutor(
-	activityRegistry *ActivityRegistry,
+	activityRegistry *registry.ActivityRegistry,
 	dataConverter dataconverter.DataConverter,
 ) ActivityTaskExecutor {
 	return &activityTaskExecutor{
@@ -51,17 +52,17 @@ func (a *activityTaskExecutor) executeActivity(
 	}, nil
 }
 
-func (a *activityTaskExecutor) Execute(t *task.ActivityTask) (*task.ActivityTaskResult, error) {
+func (a *activityTaskExecutor) Execute(_ context.Context, t *task.ActivityTask) (*task.ActivityTaskResult, error) {
 	name := t.TaskScheduleEvent.Name
 	inputBytes := t.TaskScheduleEvent.Input
 	if activity, ok := a.ActivityRegistry.Activities[name]; ok {
-		ctx := InjectActivityExecutionContext(context.Background(), NewActivityExecutionContext())
+		callCtx := InjectActivityExecutionContext(context.Background(), NewActivityExecutionContext())
 		input := fn.InitArgument(activity)
 		err := a.DataConverter.Unmarshal(inputBytes, input)
 		if err != nil {
 			return nil, err
 		}
-		executionResult, err := a.executeActivity(activity, ctx, input)
+		executionResult, err := a.executeActivity(activity, callCtx, input)
 		if err != nil {
 			return nil, err
 		}

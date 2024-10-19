@@ -1,6 +1,8 @@
 package task
 
-import "github.com/tuannh982/simple-workflows-go/internal/dto/history"
+import (
+	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
+)
 
 type WorkflowTask struct {
 	WorkflowID     string

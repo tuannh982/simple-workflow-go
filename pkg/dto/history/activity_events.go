@@ -1,6 +1,8 @@
 package history
 
-import "github.com/tuannh982/simple-workflows-go/internal/dto"
+import (
+	"github.com/tuannh982/simple-workflows-go/pkg/dto"
+)
 
 type ActivityScheduled struct {
 	TaskScheduledID int32

@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"github.com/stretchr/testify/assert"
-	"github.com/tuannh982/simple-workflows-go/internal/dataconverter"
-	"github.com/tuannh982/simple-workflows-go/internal/dto/history"
-	"github.com/tuannh982/simple-workflows-go/internal/dto/task"
 	"github.com/tuannh982/simple-workflows-go/internal/fn"
+	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
+	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflows-go/pkg/registry"
 	"testing"
 )
 
@@ -49,22 +50,21 @@ func callActivity(
 		},
 	}
 	// execute
-	taskResult, err := executor.Execute(mockTask)
+	taskResult, err := executor.Execute(context.TODO(), mockTask)
 	return taskResult, err
 }
 
 func initExecutor(t *testing.T) ActivityTaskExecutor {
 	var err error
-	registry := NewActivityRegistry()
-	err = registry.RegisterActivity(mockActivity1)
+	r := registry.NewActivityRegistry()
+	err = r.RegisterActivities(
+		mockActivity1,
+		mockActivity2,
+		mockActivity3,
+		mockActivity4,
+	)
 	assert.Nil(t, err)
-	err = registry.RegisterActivity(mockActivity2)
-	assert.Nil(t, err)
-	err = registry.RegisterActivity(mockActivity3)
-	assert.Nil(t, err)
-	err = registry.RegisterActivity(mockActivity4)
-	assert.Nil(t, err)
-	executor := NewActivityTaskExecutor(registry, dataConverter)
+	executor := NewActivityTaskExecutor(r, dataConverter)
 	return executor
 }
 

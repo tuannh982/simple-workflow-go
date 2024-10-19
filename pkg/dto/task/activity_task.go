@@ -1,8 +1,8 @@
 package task
 
 import (
-	"github.com/tuannh982/simple-workflows-go/internal/dto"
-	"github.com/tuannh982/simple-workflows-go/internal/dto/history"
+	"github.com/tuannh982/simple-workflows-go/pkg/dto"
+	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
 )
 
 type ActivityTask struct {

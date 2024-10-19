@@ -1,23 +1,25 @@
 package workflow
 
 import (
+	"context"
 	"errors"
-	"github.com/tuannh982/simple-workflows-go/internal/dataconverter"
-	"github.com/tuannh982/simple-workflows-go/internal/dto/history"
-	"github.com/tuannh982/simple-workflows-go/internal/dto/task"
+	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
+	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflows-go/pkg/registry"
 )
 
 type WorkflowTaskExecutor interface {
-	Execute(task *task.WorkflowTask) (*task.WorkflowTaskResult, error)
+	Execute(ctx context.Context, task *task.WorkflowTask) (*task.WorkflowTaskResult, error)
 }
 
 type workflowTaskExecutor struct {
-	WorkflowRegistry *WorkflowRegistry
+	WorkflowRegistry *registry.WorkflowRegistry
 	DataConverter    dataconverter.DataConverter
 }
 
 func NewWorkflowTaskExecutor(
-	workflowRegistry *WorkflowRegistry,
+	workflowRegistry *registry.WorkflowRegistry,
 	dataConverter dataconverter.DataConverter,
 ) WorkflowTaskExecutor {
 	return &workflowTaskExecutor{
@@ -41,7 +43,7 @@ func (w *workflowTaskExecutor) augmentWorkflowTaskEvents(t *task.WorkflowTask) [
 	return augmentedNewEvents
 }
 
-func (w *workflowTaskExecutor) Execute(t *task.WorkflowTask) (*task.WorkflowTaskResult, error) {
+func (w *workflowTaskExecutor) Execute(_ context.Context, t *task.WorkflowTask) (*task.WorkflowTaskResult, error) {
 	if len(t.NewEvents) == 0 {
 		return nil, errors.New("no new events, nothing to do")
 	}

@@ -3,13 +3,14 @@ package workflow_task_executor
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
-	"github.com/tuannh982/simple-workflows-go/internal/dataconverter"
-	"github.com/tuannh982/simple-workflows-go/internal/dto"
-	"github.com/tuannh982/simple-workflows-go/internal/dto/history"
-	"github.com/tuannh982/simple-workflows-go/internal/dto/task"
 	"github.com/tuannh982/simple-workflows-go/internal/fn"
 	"github.com/tuannh982/simple-workflows-go/internal/workflow"
 	"github.com/tuannh982/simple-workflows-go/pkg/api"
+	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflows-go/pkg/dto"
+	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
+	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflows-go/pkg/registry"
 	"github.com/tuannh982/simple-workflows-go/pkg/utils/ptr"
 	"testing"
 	"time"
@@ -33,10 +34,10 @@ func mockWorkflow1(ctx context.Context, input *mockStruct) (*mockStruct, error) 
 
 func initExecutor(t *testing.T) workflow.WorkflowTaskExecutor {
 	var err error
-	registry := workflow.NewWorkflowRegistry()
-	err = registry.RegisterWorkflow(mockWorkflow1)
+	r := registry.NewWorkflowRegistry()
+	err = r.RegisterWorkflows(mockWorkflow1)
 	assert.Nil(t, err)
-	executor := workflow.NewWorkflowTaskExecutor(registry, dataConverter)
+	executor := workflow.NewWorkflowTaskExecutor(r, dataConverter)
 	return executor
 }
 
@@ -64,7 +65,7 @@ func TestWorkflowTaskExecutorCallActivity1(t *testing.T) {
 		OldEvents:      make([]*history.HistoryEvent, 0),
 		NewEvents:      newEvents,
 	}
-	taskResult, err := executor.Execute(mockTask)
+	taskResult, err := executor.Execute(context.TODO(), mockTask)
 	assert.NoError(t, err)
 	activityCall := taskResult.PendingActivities[0]
 	assert.Equal(t, int32(1), activityCall.TaskScheduledID)
@@ -102,7 +103,7 @@ func TestWorkflowTaskExecutorNonDeterministicError1(t *testing.T) {
 		OldEvents:      make([]*history.HistoryEvent, 0),
 		NewEvents:      newEvents,
 	}
-	_, err = executor.Execute(mockTask)
+	_, err = executor.Execute(context.TODO(), mockTask)
 	assert.Error(t, err)
 }
 
@@ -146,7 +147,7 @@ func TestWorkflowTaskExecutorNonDeterministicError2(t *testing.T) {
 		OldEvents:      make([]*history.HistoryEvent, 0),
 		NewEvents:      newEvents,
 	}
-	_, err = executor.Execute(mockTask)
+	_, err = executor.Execute(context.TODO(), mockTask)
 	assert.Error(t, err)
 }
 
@@ -191,7 +192,7 @@ func TestWorkflowTaskExecutorCallTimer(t *testing.T) {
 		OldEvents:      make([]*history.HistoryEvent, 0),
 		NewEvents:      newEvents,
 	}
-	taskResult, err := executor.Execute(mockTask)
+	taskResult, err := executor.Execute(context.TODO(), mockTask)
 	assert.NoError(t, err)
 	timerCall := taskResult.PendingTimers[0]
 	assert.Equal(t, int32(2), timerCall.TimerID)
@@ -249,7 +250,7 @@ func TestWorkflowTaskExecutorNonDeterministicError3(t *testing.T) {
 		OldEvents:      make([]*history.HistoryEvent, 0),
 		NewEvents:      newEvents,
 	}
-	_, err = executor.Execute(mockTask)
+	_, err = executor.Execute(context.TODO(), mockTask)
 	assert.Error(t, err)
 }
 
@@ -304,7 +305,7 @@ func TestWorkflowTaskExecutorCallActivity2(t *testing.T) {
 		OldEvents:      make([]*history.HistoryEvent, 0),
 		NewEvents:      newEvents,
 	}
-	taskResult, err := executor.Execute(mockTask)
+	taskResult, err := executor.Execute(context.TODO(), mockTask)
 	assert.NoError(t, err)
 	activityCall := taskResult.PendingActivities[0]
 	assert.Equal(t, int32(3), activityCall.TaskScheduledID)
@@ -379,7 +380,7 @@ func TestWorkflowTaskExecutorComplete(t *testing.T) {
 		OldEvents:      make([]*history.HistoryEvent, 0),
 		NewEvents:      newEvents,
 	}
-	taskResult, err := executor.Execute(mockTask)
+	taskResult, err := executor.Execute(context.TODO(), mockTask)
 	assert.NoError(t, err)
 	assert.NotNil(t, taskResult)
 	assert.NotNil(t, taskResult.WorkflowExecutionCompleted)

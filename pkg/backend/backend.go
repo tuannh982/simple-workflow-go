@@ -2,8 +2,8 @@ package backend
 
 import (
 	"context"
-	"github.com/tuannh982/simple-workflows-go/internal/dto/history"
-	"github.com/tuannh982/simple-workflows-go/internal/dto/task"
+	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
+	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
 )
 
 type Backend interface {
@@ -13,8 +13,8 @@ type Backend interface {
 	AppendWorkflowHistory(context.Context, string, *history.HistoryEvent) error
 	GetWorkflowTask(ctx context.Context) (*task.WorkflowTask, error)
 	CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTaskResult) error
-	AbandonWorkflowTask(ctx context.Context, task *task.WorkflowTask) error
+	AbandonWorkflowTask(ctx context.Context, task *task.WorkflowTask, reason *string) error
 	GetActivityTask(ctx context.Context) (*task.ActivityTask, error)
 	CompleteActivityTask(ctx context.Context, result *task.ActivityTaskResult) error
-	AbandonActivityTask(ctx context.Context, task *task.ActivityTask) error
+	AbandonActivityTask(ctx context.Context, task *task.ActivityTask, reason *string) error
 }

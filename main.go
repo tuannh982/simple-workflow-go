@@ -3,10 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/tuannh982/simple-workflows-go/internal/activity"
-	"github.com/tuannh982/simple-workflows-go/internal/dataconverter"
-	"github.com/tuannh982/simple-workflows-go/internal/workflow"
 	"github.com/tuannh982/simple-workflows-go/pkg/api"
+	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflows-go/pkg/registry"
 )
 
 type HelloActivityInput struct {
@@ -41,9 +40,9 @@ func HelloWorkflow(ctx context.Context, input *HelloWorkflowInput) (*HelloWorkfl
 
 func main() {
 	dataConverter := dataconverter.NewJsonDataConverter()
-	activityRegistry := activity.NewActivityRegistry()
+	activityRegistry := registry.NewActivityRegistry()
 	_ = activityRegistry.RegisterActivity(HelloActivity)
-	workflowRegistry := workflow.NewWorkflowRegistry()
+	workflowRegistry := registry.NewWorkflowRegistry()
 	_ = workflowRegistry.RegisterWorkflow(HelloWorkflow)
 	_ = dataConverter
 	// TODO wip
