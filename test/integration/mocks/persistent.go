@@ -110,7 +110,7 @@ func (r *persistent) InsertEvent(event *db_event) {
 
 func (r *persistent) DeleteEventsByWorkflowAndLock(workflowID string, lockedBy string) {
 	for k, v := range r.events_pk {
-		if v.workflowID == workflowID && *v.lockedBy == lockedBy {
+		if v.workflowID == workflowID && v.lockedBy != nil && *v.lockedBy == lockedBy {
 			delete(r.events_pk, k)
 		}
 	}

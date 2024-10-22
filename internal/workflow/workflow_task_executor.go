@@ -29,16 +29,22 @@ func NewWorkflowTaskExecutor(
 }
 
 func (w *workflowTaskExecutor) augmentWorkflowTaskEvents(t *task.WorkflowTask) []*history.HistoryEvent {
+	taskStartedEvent := &history.HistoryEvent{
+		Timestamp:           t.FetchTimestamp,
+		WorkflowTaskStarted: &history.WorkflowTaskStarted{},
+	}
 	l := len(t.NewEvents)
 	augmentedNewEvents := make([]*history.HistoryEvent, 0, l+1)
-	if t.NewEvents[0].WorkflowTaskStarted == nil {
-		augmentedNewEvents = append(augmentedNewEvents, &history.HistoryEvent{
-			Timestamp:           t.FetchTimestamp,
-			WorkflowTaskStarted: &history.WorkflowTaskStarted{},
-		})
-	}
-	for i := 0; i < l; i++ {
-		augmentedNewEvents = append(augmentedNewEvents, t.NewEvents[i])
+	if len(t.NewEvents) == 0 {
+		return []*history.HistoryEvent{taskStartedEvent}
+	} else {
+		firstEvent := t.NewEvents[0]
+		if firstEvent.WorkflowExecutionStarted == nil {
+			augmentedNewEvents = append(augmentedNewEvents, taskStartedEvent)
+		}
+		for i := 0; i < l; i++ {
+			augmentedNewEvents = append(augmentedNewEvents, t.NewEvents[i])
+		}
 	}
 	return augmentedNewEvents
 }

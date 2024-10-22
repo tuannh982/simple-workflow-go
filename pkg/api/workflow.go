@@ -44,7 +44,7 @@ func ScheduleWorkflow[T any, R any](
 	dataConverter dataconverter.DataConverter,
 	backend backend.Backend,
 	workflow types.Workflow[T, R],
-	input T,
+	input *T,
 ) error {
 	name := fn.GetFunctionName(workflow)
 	inputBytes, err := dataConverter.Marshal(input)

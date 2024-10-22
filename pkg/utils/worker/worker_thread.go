@@ -49,13 +49,12 @@ loop:
 				Str("worker_thread", w.name).
 				Msg("task fetched")
 			if err != nil {
-				log.Err(err).
-					Str("worker_thread", w.name).
-					Msg("error while polling task")
 				if errors.Is(err, ErrNoTask) {
+					// expected error, do not log
+				} else {
 					log.Err(err).
 						Str("worker_thread", w.name).
-						Msg("no task found")
+						Msg("error while polling task")
 				}
 				w.bo.BackOff()
 			} else {

@@ -45,12 +45,16 @@ func (m *mockBackend) CreateWorkflow(ctx context.Context, info *history.Workflow
 	m.Lock()
 	defer m.Unlock()
 	now := time.Now().UnixMilli()
+	var parentWorkflowID *string
+	if info.ParentWorkflowInfo != nil {
+		parentWorkflowID = &info.ParentWorkflowInfo.WorkflowID
+	}
 	workflow := &db_workflow{
 		id:                   info.WorkflowID,
 		createdAt:            now,
 		currentRuntimeStatus: ptr.Ptr("pending"),
 		input:                info.Input,
-		parentWorkflowID:     ptr.Ptr(info.ParentWorkflowInfo.WorkflowID),
+		parentWorkflowID:     parentWorkflowID,
 	}
 	workflowTask := &db_task{
 		sequenceNo: m.persistent.NextSeqNo(),
@@ -76,6 +80,21 @@ func (m *mockBackend) CreateWorkflow(ctx context.Context, info *history.Workflow
 	m.persistent.InsertWorkflow(workflow)
 	m.persistent.InsertTask(workflowTask)
 	m.persistent.InsertEvent(event)
+	return nil
+}
+
+func (m *mockBackend) GetWorkflowResult(ctx context.Context, workflowID string) error {
+	w := m.persistent.GetWorkflow(workflowID)
+	if w == nil {
+		return errors.New("workflow not found")
+	}
+	if w.currentRuntimeStatus == nil || *w.currentRuntimeStatus != "completed" {
+		return errors.New("workflow not completed")
+	}
+	wOutput := w.resultOutput
+	wError := w.resultError
+	// TODO unmarshal to struct
+	fmt.Printf("workflow result: id: %s, out: %v, err: %v", workflowID, wOutput, wError)
 	return nil
 }
 
@@ -123,6 +142,9 @@ func (m *mockBackend) GetWorkflowTask(ctx context.Context) (*task.WorkflowTask, 
 		return nil, worker.ErrNoTask
 	}
 	selected, events := utils.FirstInMap(availableWorkflowEventsGroupedByWorkflowID)
+	for _, event := range events {
+		event.lockedBy = &m.thisInstanceID
+	}
 	workflowTask := availableTasksMap[selected]
 	sort.Slice(events, func(i, j int) bool {
 		return events[i].sequenceNo < events[j].sequenceNo
@@ -168,15 +190,14 @@ func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.Wor
 					workflow.completedAt = &event.Timestamp
 					workflow.currentRuntimeStatus = ptr.Ptr("completed")
 					workflow.resultOutput = event.WorkflowExecutionCompleted.Result
-					workflow.resultError = &event.WorkflowExecutionCompleted.Error.Message
+					if event.WorkflowExecutionCompleted.Error != nil {
+						workflow.resultError = ptr.Ptr(event.WorkflowExecutionCompleted.Error.Message)
+					}
 					isCompleted = true
 				}
 			}
 			// delete processed events, and move them to history
 			m.persistent.DeleteEventsByWorkflowAndLock(result.Task.WorkflowID, m.thisInstanceID)
-			sort.Slice(result.Task.NewEvents, func(i, j int) bool {
-				return result.Task.NewEvents[i].Timestamp < result.Task.NewEvents[j].Timestamp
-			})
 			for _, event := range result.Task.NewEvents {
 				m.persistent.InsertHistoryEvent(&db_history_event{
 					workflowID: result.Task.WorkflowID,
@@ -242,6 +263,7 @@ func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.Wor
 			if isCompleted {
 				m.persistent.RemoveTask(result.Task.SeqNo)
 			}
+			return nil
 		}
 	}
 	return errors.New("unexpected error")
@@ -295,7 +317,7 @@ func (m *mockBackend) CompleteActivityTask(ctx context.Context, result *task.Act
 			m.persistent.RemoveTask(result.Task.SeqNo)
 			activityCompleted := &history.HistoryEvent{
 				ActivityCompleted: &history.ActivityCompleted{
-					TaskScheduledID: result.Task.SeqNo,
+					TaskScheduledID: result.Task.TaskScheduleEvent.TaskScheduledID,
 					ExecutionResult: *result.ExecutionResult,
 				},
 			}
@@ -307,6 +329,7 @@ func (m *mockBackend) CompleteActivityTask(ctx context.Context, result *task.Act
 				visibleAt:  now,
 				payload:    payload,
 			})
+			return nil
 		}
 	}
 	return errors.New("unexpected error")

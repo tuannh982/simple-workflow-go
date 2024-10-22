@@ -170,6 +170,10 @@ func (w *WorkflowRuntime) executeWorkflow(
 
 func (w *WorkflowRuntime) handleWorkflowExecutionStarted(event *history.HistoryEvent) error {
 	if e := event.WorkflowExecutionStarted; e != nil {
+		if w.WorkflowExecutionStartedEvent != nil {
+			// ignore duplicated event
+			return nil
+		}
 		w.WorkflowExecutionStartedEvent = event
 		name := e.Name
 		inputBytes := e.Input
@@ -230,9 +234,12 @@ func (w *WorkflowRuntime) handleWorkflowTaskStarted(event *history.HistoryEvent)
 */
 
 func (w *WorkflowRuntime) ScheduleNewActivity(activity any, input any) *ActivityPromise {
-	promise := NewActivityPromise(w, activity)
 	taskScheduledID := w.nextSeqNo()
 	name := fn.GetFunctionName(activity)
+	if w.ActivityPromises[taskScheduledID] != nil {
+		return w.ActivityPromises[taskScheduledID]
+	}
+	promise := NewActivityPromise(w, activity)
 	inputBytes, err := w.DataConverter.Marshal(input)
 	if err != nil {
 		panic(err)

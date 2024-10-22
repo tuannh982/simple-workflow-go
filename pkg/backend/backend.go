@@ -10,6 +10,7 @@ type Backend interface {
 	Start(context.Context) error
 	Stop(context.Context) error
 	CreateWorkflow(ctx context.Context, info *history.WorkflowExecutionStarted) error
+	GetWorkflowResult(ctx context.Context, workflowID string) error // TODO unstable
 	AppendWorkflowEvent(ctx context.Context, workflowID string, event *history.HistoryEvent) error
 	GetWorkflowTask(ctx context.Context) (*task.WorkflowTask, error)
 	CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTaskResult) error

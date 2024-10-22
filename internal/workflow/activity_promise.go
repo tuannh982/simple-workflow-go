@@ -45,5 +45,20 @@ func (a *ActivityPromise) Await() (any, error) {
 			}
 		}
 	}
-	panic(ErrControlledPanic)
+	if a.Promise.IsDone() {
+		err := a.Promise.Error()
+		if a.Promise.Value() != nil {
+			ptr := fn.InitResult(a.Activity)
+			bytes := *a.Promise.Value()
+			unExpectedErr := a.WorkflowRuntime.DataConverter.Unmarshal(bytes, ptr)
+			if unExpectedErr != nil {
+				panic(unExpectedErr)
+			}
+			return ptr, err
+		} else {
+			return nil, err
+		}
+	} else {
+		panic(ErrControlledPanic)
+	}
 }
