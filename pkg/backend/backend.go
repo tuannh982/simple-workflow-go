@@ -10,7 +10,7 @@ type Backend interface {
 	Start(context.Context) error
 	Stop(context.Context) error
 	CreateWorkflow(ctx context.Context, info *history.WorkflowExecutionStarted) error
-	AppendWorkflowHistory(context.Context, string, *history.HistoryEvent) error
+	AppendWorkflowEvent(ctx context.Context, workflowID string, event *history.HistoryEvent) error
 	GetWorkflowTask(ctx context.Context) (*task.WorkflowTask, error)
 	CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTaskResult) error
 	AbandonWorkflowTask(ctx context.Context, task *task.WorkflowTask, reason *string) error
