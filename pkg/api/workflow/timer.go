@@ -1,4 +1,4 @@
-package api
+package workflow
 
 import (
 	"github.com/tuannh982/simple-workflows-go/internal/workflow"

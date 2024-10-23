@@ -2,6 +2,8 @@ package backend
 
 import (
 	"context"
+	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflows-go/pkg/dto"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
 )
@@ -9,8 +11,9 @@ import (
 type Backend interface {
 	Start(context.Context) error
 	Stop(context.Context) error
+	DataConverter() dataconverter.DataConverter
 	CreateWorkflow(ctx context.Context, info *history.WorkflowExecutionStarted) error
-	GetWorkflowResult(ctx context.Context, workflowID string) error // TODO unstable
+	GetWorkflowResult(ctx context.Context, name string, workflowID string) (*dto.WorkflowExecutionResult, error)
 	AppendWorkflowEvent(ctx context.Context, workflowID string, event *history.HistoryEvent) error
 	GetWorkflowTask(ctx context.Context) (*task.WorkflowTask, error)
 	CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTaskResult) error

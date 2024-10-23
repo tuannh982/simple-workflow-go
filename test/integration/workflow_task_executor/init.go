@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/stretchr/testify/assert"
 	"github.com/tuannh982/simple-workflows-go/internal/workflow"
-	"github.com/tuannh982/simple-workflows-go/pkg/api"
+	workflow2 "github.com/tuannh982/simple-workflows-go/pkg/api/workflow"
 	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
 	"github.com/tuannh982/simple-workflows-go/pkg/registry"
 	"testing"
@@ -19,9 +19,9 @@ func mockActivity2(_ context.Context, input *mockStruct) (*mockStruct, error) { 
 func mockWorkflow1(ctx context.Context, input *mockStruct) (*mockStruct, error) {
 	var r *mockStruct
 	var err error
-	r, err = api.CallActivity(ctx, mockActivity1, input).Await()
-	_, err = api.CreateTimer(ctx, 50*time.Second).Await()
-	r, err = api.CallActivity(ctx, mockActivity2, input).Await()
+	r, err = workflow2.CallActivity(ctx, mockActivity1, input).Await()
+	workflow2.WaitFor(ctx, 50*time.Second)
+	r, err = workflow2.CallActivity(ctx, mockActivity2, input).Await()
 	return r, err
 }
 

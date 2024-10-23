@@ -32,8 +32,9 @@ type WorkflowRuntime struct {
 	ActivityPromises        map[int32]*ActivityPromise
 	TimerCreatedEvents      map[int32]*history.TimerCreated
 	TimerPromises           map[int32]*TimerPromise
-	// start event
-	WorkflowExecutionStartedEvent *history.HistoryEvent
+	// start
+	WorkflowExecutionStartedEvent *history.WorkflowExecutionStarted
+	Version                       string
 	// final event, can only be execution completed event, and it's internally emit
 	WorkflowExecutionCompleted *history.WorkflowExecutionCompleted
 }
@@ -174,7 +175,8 @@ func (w *WorkflowRuntime) handleWorkflowExecutionStarted(event *history.HistoryE
 			// ignore duplicated event
 			return nil
 		}
-		w.WorkflowExecutionStartedEvent = event
+		w.WorkflowExecutionStartedEvent = event.WorkflowExecutionStarted
+		w.Version = event.WorkflowExecutionStarted.Version
 		name := e.Name
 		inputBytes := e.Input
 		if workflow, ok := w.WorkflowRegistry.Workflows[name]; ok {

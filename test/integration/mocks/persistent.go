@@ -9,11 +9,13 @@ import (
 
 type db_workflow struct {
 	id                   string
+	name                 string
+	version              string
 	createdAt            int64
 	startAt              *int64
 	completedAt          *int64
 	lastUpdatedAt        *int64
-	currentRuntimeStatus *string
+	currentRuntimeStatus string
 	input                []byte
 	resultOutput         *[]byte
 	resultError          *string

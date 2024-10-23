@@ -1,13 +1,23 @@
 package utils
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/tuannh982/simple-workflows-go/pkg/utils/ptr"
+)
 
-func Map[A any, B any](a []A, f func(A) B) []B {
+func MapArray[A any, B any](a []A, f func(A) B) []B {
 	result := make([]B, len(a))
 	for i, v := range a {
 		result[i] = f(v)
 	}
 	return result
+}
+
+func Map[A any, B any](a *A, f func(A) B) *B {
+	if a == nil {
+		return nil
+	}
+	return ptr.Ptr(f(*a))
 }
 
 func ToMap[K comparable, T any](extractor func(T) K, arr []T) map[K]T {

@@ -4,24 +4,25 @@ import (
 	"context"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
-	"github.com/tuannh982/simple-workflows-go/pkg/api"
+	"github.com/tuannh982/simple-workflows-go/pkg/api/client"
 	"testing"
-	"time"
 )
 
 func TestWorkers(t *testing.T) {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	be, activityWorker, workflowWorker := initWorkers(t)
-	// TODO implement me
 	ctx := context.Background()
-	_ = activityWorker
 	activityWorker.Start(ctx)
+	defer activityWorker.Stop(ctx)
 	workflowWorker.Start(ctx)
-	err := api.ScheduleWorkflow(dataConverter, be, mockWorkflow1, &mockStruct{})
+	defer workflowWorker.Stop(ctx)
+	err := client.ScheduleWorkflow(ctx, be, mockWorkflow1, &mockStruct{Msg: "initial"}, client.WorkflowScheduleOptions{
+		WorkflowID: "mock-workflow-id",
+		Version:    "1",
+	})
 	assert.NoError(t, err)
-	time.Sleep(15 * time.Second)
-	err = be.GetWorkflowResult(ctx, "test")
+	wResult, wErr, err := client.AwaitWorkflowResult(ctx, be, mockWorkflow1, "mock-workflow-id")
 	assert.NoError(t, err)
-	activityWorker.Stop(ctx)
-	workflowWorker.Stop(ctx)
+	assert.Equal(t, "initial,activity_1,activity_2", wResult.Msg)
+	assert.Nil(t, wErr)
 }
