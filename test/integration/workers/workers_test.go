@@ -2,15 +2,15 @@ package workers
 
 import (
 	"context"
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/tuannh982/simple-workflows-go/pkg/api/client"
+	"go.uber.org/zap"
 	"testing"
 )
 
 func TestWorkers(t *testing.T) {
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	be, activityWorker, workflowWorker := initWorkers(t)
+	logger := zap.NewNop()
+	be, activityWorker, workflowWorker := initWorkers(t, logger)
 	ctx := context.Background()
 	activityWorker.Start(ctx)
 	defer activityWorker.Stop(ctx)

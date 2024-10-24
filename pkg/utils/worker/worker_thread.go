@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"github.com/tuannh982/simple-workflows-go/pkg/utils/backoff"
 	"github.com/tuannh982/simple-workflows-go/pkg/utils/ptr"
+	"go.uber.org/zap"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -17,6 +17,7 @@ type WorkerThread[T any, R any] struct {
 	taskProcessor TaskProcessor[T, R]
 	bo            backoff.BackOff
 	wg            *sync.WaitGroup
+	logger        *zap.Logger
 }
 
 func NewWorkerThread[T any, R any](
@@ -24,12 +25,14 @@ func NewWorkerThread[T any, R any](
 	taskProcessor TaskProcessor[T, R],
 	bo backoff.BackOff,
 	wg *sync.WaitGroup,
+	logger *zap.Logger,
 ) *WorkerThread[T, R] {
 	return &WorkerThread[T, R]{
 		name:          name,
 		taskProcessor: taskProcessor,
 		bo:            bo,
 		wg:            wg,
+		logger:        logger,
 	}
 }
 
@@ -41,27 +44,19 @@ loop:
 		case <-ctx.Done():
 			break loop
 		default:
-			log.Debug().
-				Str("worker_thread", w.name).
-				Msg("fetching task")
+			w.logger.Debug("Fetching task")
 			task, err := w.taskProcessor.GetTask(ctx)
-			log.Debug().
-				Str("worker_thread", w.name).
-				Msg("task fetched")
+			w.logger.Debug("Task fetched")
 			if err != nil {
 				if errors.Is(err, ErrNoTask) {
 					// expected error, do not log
 				} else {
-					log.Err(err).
-						Str("worker_thread", w.name).
-						Msg("error while polling task")
+					w.logger.Error("Error while polling task", zap.Error(err))
 				}
 				w.bo.BackOff()
 			} else {
 				if err = w.processTask(ctx, task); err != nil {
-					log.Err(err).
-						Str("worker_thread", w.name).
-						Msg("error while processing task")
+					w.logger.Error("Error while processing task", zap.Error(err))
 				}
 				w.bo.Reset()
 			}
@@ -80,26 +75,18 @@ func (w *WorkerThread[T, R]) processTask(ctx context.Context, task *T) (err erro
 	}()
 	result, err := w.taskProcessor.ProcessTask(ctx, task)
 	if err != nil {
-		log.Err(err).
-			Str("worker_thread", w.name).
-			Msg("error while processing task")
+		w.logger.Error("Error while processing task", zap.Error(err))
 		err = w.taskProcessor.AbandonTask(ctx, task, ptr.Ptr(err.Error()))
 		if err != nil {
-			log.Err(err).
-				Str("worker_thread", w.name).
-				Msg("error while abandoning task")
+			w.logger.Error("Error while abandoning task", zap.Error(err))
 		}
 	} else {
 		err = w.taskProcessor.CompleteTask(ctx, result)
 		if err != nil {
-			log.Err(err).
-				Str("worker_thread", w.name).
-				Msg("error while completing task")
+			w.logger.Error("Error while completing task", zap.Error(err))
 			err = w.taskProcessor.AbandonTask(ctx, task, nil)
 			if err != nil {
-				log.Err(err).
-					Str("worker_thread", w.name).
-					Msg("error while abandoning task")
+				w.logger.Error("Error while abandoning task", zap.Error(err))
 			}
 		}
 	}

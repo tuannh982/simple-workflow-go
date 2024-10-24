@@ -74,6 +74,7 @@ func (m *mockBackend) CreateWorkflow(ctx context.Context, info *history.Workflow
 		payload:    info.Input,
 	}
 	payload, err := dto.Marshal(&history.HistoryEvent{
+		Timestamp:                now,
 		WorkflowExecutionStarted: info,
 	})
 	if err != nil {
@@ -93,6 +94,8 @@ func (m *mockBackend) CreateWorkflow(ctx context.Context, info *history.Workflow
 }
 
 func (m *mockBackend) GetWorkflowResult(ctx context.Context, name string, workflowID string) (*dto.WorkflowExecutionResult, error) {
+	m.Lock()
+	defer m.Unlock()
 	w := m.persistent.GetWorkflow(workflowID)
 	if w == nil {
 		return nil, errors.New("workflow not found")
@@ -239,6 +242,7 @@ func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.Wor
 					createdAt:  now,
 					visibleAt:  now,
 					payload: m.ForceMarshalHistoryEvent(&history.HistoryEvent{
+						Timestamp:         now,
 						ActivityScheduled: tsk,
 					}),
 				})
@@ -250,6 +254,7 @@ func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.Wor
 					createdAt:  now,
 					visibleAt:  now,
 					payload: m.ForceMarshalHistoryEvent(&history.HistoryEvent{
+						Timestamp:    now,
 						TimerCreated: event,
 					}),
 				})
@@ -259,6 +264,7 @@ func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.Wor
 					createdAt:  now,
 					visibleAt:  event.FireAt,
 					payload: m.ForceMarshalHistoryEvent(&history.HistoryEvent{
+						Timestamp:  event.FireAt,
 						TimerFired: &history.TimerFired{TimerID: event.TimerID},
 					}),
 				})
@@ -270,6 +276,7 @@ func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.Wor
 					createdAt:  now,
 					visibleAt:  now,
 					payload: m.ForceMarshalHistoryEvent(&history.HistoryEvent{
+						Timestamp:                  now,
 						WorkflowExecutionCompleted: result.WorkflowExecutionCompleted,
 					}),
 				})
@@ -330,6 +337,7 @@ func (m *mockBackend) CompleteActivityTask(ctx context.Context, result *task.Act
 		if t.taskType == string(task.TaskTypeActivity) && *t.lockedBy == m.thisInstanceID {
 			m.persistent.RemoveTask(result.Task.SeqNo)
 			activityCompleted := &history.HistoryEvent{
+				Timestamp: now,
 				ActivityCompleted: &history.ActivityCompleted{
 					TaskScheduledID: result.Task.TaskScheduleEvent.TaskScheduledID,
 					ExecutionResult: *result.ExecutionResult,

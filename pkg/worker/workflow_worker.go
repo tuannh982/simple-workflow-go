@@ -2,31 +2,40 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"github.com/tuannh982/simple-workflows-go/internal/workflow"
 	"github.com/tuannh982/simple-workflows-go/pkg/backend"
 	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
 	"github.com/tuannh982/simple-workflows-go/pkg/registry"
 	"github.com/tuannh982/simple-workflows-go/pkg/utils/worker"
+	"go.uber.org/zap"
 )
 
 type WorkflowWorker struct {
+	name      string
 	processor worker.TaskProcessor[task.WorkflowTask, task.WorkflowTaskResult]
 	w         worker.Worker[task.WorkflowTask, task.WorkflowTaskResult]
+	logger    *zap.Logger
 }
 
 func NewWorkflowWorker(
+	name string,
 	be backend.Backend,
 	registry *registry.WorkflowRegistry,
 	dataConverter dataconverter.DataConverter,
+	logger *zap.Logger,
 	opts ...func(options *worker.WorkerOptions),
 ) *WorkflowWorker {
-	executor := workflow.NewWorkflowTaskExecutor(registry, dataConverter)
-	processor := workflow.NewWorkflowTaskProcessor(be, executor)
-	w := worker.NewWorker("workflow worker", processor, opts...)
+	fqn := fmt.Sprintf("Activity worker %s", name)
+	childLogger := logger.With(zap.String("worker", name))
+	executor := workflow.NewWorkflowTaskExecutor(registry, dataConverter, childLogger)
+	processor := workflow.NewWorkflowTaskProcessor(be, executor, childLogger)
+	w := worker.NewWorker(fqn, processor, childLogger, opts...)
 	return &WorkflowWorker{
 		processor: processor,
 		w:         w,
+		logger:    childLogger,
 	}
 }
 

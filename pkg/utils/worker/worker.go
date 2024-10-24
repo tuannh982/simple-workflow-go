@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/tuannh982/simple-workflows-go/pkg/utils/backoff"
+	"go.uber.org/zap"
 	"sync"
 	"time"
 )
@@ -16,6 +17,7 @@ type Worker[T any, R any] interface {
 type worker[T any, R any] struct {
 	name                    string
 	taskProcessor           TaskProcessor[T, R]
+	logger                  *zap.Logger
 	cancel                  context.CancelFunc
 	wg                      *sync.WaitGroup
 	maxConcurrentTasks      int
@@ -27,6 +29,7 @@ type worker[T any, R any] struct {
 func NewWorker[T any, R any](
 	name string,
 	taskProcessor TaskProcessor[T, R],
+	logger *zap.Logger,
 	opts ...func(*WorkerOptions),
 ) Worker[T, R] {
 	options := newWorkerOptions()
@@ -36,6 +39,7 @@ func NewWorker[T any, R any](
 	return &worker[T, R]{
 		name:                    name,
 		taskProcessor:           taskProcessor,
+		logger:                  logger,
 		wg:                      &sync.WaitGroup{},
 		maxConcurrentTasks:      options.maxConcurrentTasksLimit,
 		pollerInitialInterval:   options.pollerInitialInterval,
@@ -48,8 +52,9 @@ func (w *worker[T, R]) Start(ctx context.Context) {
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	w.cancel = cancel
 	for i := 0; i < w.maxConcurrentTasks; i++ {
+		threadName := fmt.Sprintf("Thread %d", i)
 		thread := NewWorkerThread[T, R](
-			fmt.Sprintf("%s_thread_%d", w.name, i),
+			threadName,
 			w.taskProcessor,
 			backoff.NewExponentialBackOff(
 				w.pollerInitialInterval,
@@ -57,6 +62,7 @@ func (w *worker[T, R]) Start(ctx context.Context) {
 				w.pollerBackoffMultiplier,
 			),
 			w.wg,
+			w.logger.With(zap.String("thread", threadName)),
 		)
 		w.wg.Add(1)
 		go thread.Run(ctxWithCancel)

@@ -7,6 +7,7 @@ import (
 	workflow2 "github.com/tuannh982/simple-workflows-go/pkg/api/workflow"
 	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
 	"github.com/tuannh982/simple-workflows-go/pkg/registry"
+	"go.uber.org/zap"
 	"testing"
 	"time"
 )
@@ -32,6 +33,6 @@ func initExecutor(t *testing.T) workflow.WorkflowTaskExecutor {
 	r := registry.NewWorkflowRegistry()
 	err = r.RegisterWorkflows(mockWorkflow1)
 	assert.Nil(t, err)
-	executor := workflow.NewWorkflowTaskExecutor(r, dataConverter)
+	executor := workflow.NewWorkflowTaskExecutor(r, dataConverter, zap.NewNop())
 	return executor
 }

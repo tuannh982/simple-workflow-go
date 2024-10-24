@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"sync"
 	"testing"
 	"time"
@@ -57,7 +58,7 @@ func TestWorkerDraining(t *testing.T) {
 			return nil
 		},
 	}
-	w := NewWorker("worker", taskProcessor, WithMaxConcurrentTasksLimit(3))
+	w := NewWorker("worker", taskProcessor, zap.NewNop(), WithMaxConcurrentTasksLimit(3))
 	ctx := context.Background()
 	w.Start(ctx)
 	time.Sleep(10 * time.Second)
@@ -78,7 +79,7 @@ func TestProcessError(t *testing.T) {
 			return nil
 		},
 	}
-	w := NewWorker("worker", taskProcessor, WithMaxConcurrentTasksLimit(1))
+	w := NewWorker("worker", taskProcessor, zap.NewNop(), WithMaxConcurrentTasksLimit(1))
 	ctx := context.Background()
 	w.Start(ctx)
 	time.Sleep(5 * time.Second)
@@ -98,7 +99,7 @@ func TestPanicProcessor(t *testing.T) {
 			panic("panicked")
 		},
 	}
-	w := NewWorker("worker", taskProcessor, WithMaxConcurrentTasksLimit(1))
+	w := NewWorker("worker", taskProcessor, zap.NewNop(), WithMaxConcurrentTasksLimit(1))
 	ctx := context.Background()
 	w.Start(ctx)
 	time.Sleep(3 * time.Second)
@@ -107,7 +108,7 @@ func TestPanicProcessor(t *testing.T) {
 	taskProcessor.process = func(ctx context.Context, task *mockTask) (*mockTaskResult, error) {
 		return nil, errors.New("always error")
 	}
-	w = NewWorker("worker", taskProcessor, WithMaxConcurrentTasksLimit(1))
+	w = NewWorker("worker", taskProcessor, zap.NewNop(), WithMaxConcurrentTasksLimit(1))
 	ctx = context.Background()
 	w.Start(ctx)
 	time.Sleep(3 * time.Second)

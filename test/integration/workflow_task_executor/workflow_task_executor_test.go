@@ -139,6 +139,10 @@ func TestWorkflowTaskExecutorCallTimer(t *testing.T) {
 				ScheduleToStartTimestamp: now.UnixMilli(),
 			},
 		},
+		{
+			Timestamp:           now.UnixMilli(),
+			WorkflowTaskStarted: &history.WorkflowTaskStarted{},
+		},
 		// call mockActivity1
 		{
 			ActivityScheduled: &history.ActivityScheduled{
@@ -242,6 +246,10 @@ func TestWorkflowTaskExecutorCallActivity2(t *testing.T) {
 				ScheduleToStartTimestamp: now.UnixMilli(),
 			},
 		},
+		{
+			Timestamp:           now.UnixMilli(),
+			WorkflowTaskStarted: &history.WorkflowTaskStarted{},
+		},
 		// call mockActivity1
 		{
 			ActivityScheduled: &history.ActivityScheduled{
@@ -299,6 +307,10 @@ func TestWorkflowTaskExecutorComplete(t *testing.T) {
 				ParentWorkflowInfo:       nil,
 				ScheduleToStartTimestamp: now.UnixMilli(),
 			},
+		},
+		{
+			Timestamp:           now.UnixMilli(),
+			WorkflowTaskStarted: &history.WorkflowTaskStarted{},
 		},
 		// call mockActivity1
 		{

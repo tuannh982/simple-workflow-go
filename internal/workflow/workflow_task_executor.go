@@ -7,6 +7,7 @@ import (
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
 	"github.com/tuannh982/simple-workflows-go/pkg/registry"
+	"go.uber.org/zap"
 )
 
 type WorkflowTaskExecutor interface {
@@ -14,17 +15,20 @@ type WorkflowTaskExecutor interface {
 }
 
 type workflowTaskExecutor struct {
-	WorkflowRegistry *registry.WorkflowRegistry
-	DataConverter    dataconverter.DataConverter
+	workflowRegistry *registry.WorkflowRegistry
+	dataConverter    dataconverter.DataConverter
+	logger           *zap.Logger
 }
 
 func NewWorkflowTaskExecutor(
 	workflowRegistry *registry.WorkflowRegistry,
 	dataConverter dataconverter.DataConverter,
+	logger *zap.Logger,
 ) WorkflowTaskExecutor {
 	return &workflowTaskExecutor{
-		WorkflowRegistry: workflowRegistry,
-		DataConverter:    dataConverter,
+		workflowRegistry: workflowRegistry,
+		dataConverter:    dataConverter,
+		logger:           logger,
 	}
 }
 
@@ -55,7 +59,7 @@ func (w *workflowTaskExecutor) Execute(_ context.Context, t *task.WorkflowTask) 
 	}
 	t.NewEvents = w.augmentWorkflowTaskEvents(t)
 	//
-	runtime := NewWorkflowRuntime(w.WorkflowRegistry, w.DataConverter, t)
+	runtime := NewWorkflowRuntime(w.workflowRegistry, w.dataConverter, t)
 	err := runtime.RunSimulation()
 	if err != nil {
 		return nil, err

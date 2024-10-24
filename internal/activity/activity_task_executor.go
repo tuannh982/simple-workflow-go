@@ -8,6 +8,7 @@ import (
 	"github.com/tuannh982/simple-workflows-go/pkg/dto"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
 	"github.com/tuannh982/simple-workflows-go/pkg/registry"
+	"go.uber.org/zap"
 	"runtime/debug"
 )
 
@@ -16,17 +17,20 @@ type ActivityTaskExecutor interface {
 }
 
 type activityTaskExecutor struct {
-	ActivityRegistry *registry.ActivityRegistry
-	DataConverter    dataconverter.DataConverter
+	activityRegistry *registry.ActivityRegistry
+	dataConverter    dataconverter.DataConverter
+	logger           *zap.Logger
 }
 
 func NewActivityTaskExecutor(
 	activityRegistry *registry.ActivityRegistry,
 	dataConverter dataconverter.DataConverter,
+	logger *zap.Logger,
 ) ActivityTaskExecutor {
 	return &activityTaskExecutor{
-		ActivityRegistry: activityRegistry,
-		DataConverter:    dataConverter,
+		activityRegistry: activityRegistry,
+		dataConverter:    dataConverter,
+		logger:           logger,
 	}
 }
 
@@ -41,7 +45,7 @@ func (a *activityTaskExecutor) executeActivity(
 		}
 	}()
 	callResult, callErr := fn.CallFn(activity, ctx, input)
-	marshaledCallResult, err := dto.ExtractResultFromFnCallResult(callResult, a.DataConverter.Marshal)
+	marshaledCallResult, err := dto.ExtractResultFromFnCallResult(callResult, a.dataConverter.Marshal)
 	if err != nil {
 		return nil, err
 	}
@@ -55,10 +59,10 @@ func (a *activityTaskExecutor) executeActivity(
 func (a *activityTaskExecutor) Execute(_ context.Context, t *task.ActivityTask) (*task.ActivityTaskResult, error) {
 	name := t.TaskScheduleEvent.Name
 	inputBytes := t.TaskScheduleEvent.Input
-	if activity, ok := a.ActivityRegistry.Activities[name]; ok {
+	if activity, ok := a.activityRegistry.Activities[name]; ok {
 		callCtx := InjectActivityExecutionContext(context.Background(), NewActivityExecutionContext())
 		input := fn.InitArgument(activity)
-		err := a.DataConverter.Unmarshal(inputBytes, input)
+		err := a.dataConverter.Unmarshal(inputBytes, input)
 		if err != nil {
 			return nil, err
 		}

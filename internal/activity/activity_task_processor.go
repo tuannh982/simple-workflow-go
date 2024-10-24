@@ -5,16 +5,19 @@ import (
 	"github.com/tuannh982/simple-workflows-go/pkg/backend"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
 	"github.com/tuannh982/simple-workflows-go/pkg/utils/worker"
+	"go.uber.org/zap"
 )
 
 type activityTaskProcessor struct {
 	be       backend.Backend
 	executor ActivityTaskExecutor
+	logger   *zap.Logger
 }
 
 func NewActivityTaskProcessor(
 	be backend.Backend,
 	executor ActivityTaskExecutor,
+	logger *zap.Logger,
 ) worker.TaskProcessor[task.ActivityTask, task.ActivityTaskResult] {
 	return &activityTaskProcessor{
 		be:       be,

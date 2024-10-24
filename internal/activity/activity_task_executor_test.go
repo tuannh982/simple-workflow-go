@@ -9,6 +9,7 @@ import (
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
 	"github.com/tuannh982/simple-workflows-go/pkg/registry"
+	"go.uber.org/zap"
 	"testing"
 )
 
@@ -64,7 +65,7 @@ func initExecutor(t *testing.T) ActivityTaskExecutor {
 		mockActivity4,
 	)
 	assert.Nil(t, err)
-	executor := NewActivityTaskExecutor(r, dataConverter)
+	executor := NewActivityTaskExecutor(r, dataConverter, zap.NewNop())
 	return executor
 }
 
