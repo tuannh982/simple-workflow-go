@@ -26,12 +26,12 @@ type WorkflowRuntime struct {
 	// runtime state
 	HistoryIndex            int
 	IsReplaying             bool
-	SequenceNo              int32
+	SequenceNo              int64
 	CurrentTimestamp        int64
-	ActivityScheduledEvents map[int32]*history.ActivityScheduled
-	ActivityPromises        map[int32]*ActivityPromise
-	TimerCreatedEvents      map[int32]*history.TimerCreated
-	TimerPromises           map[int32]*TimerPromise
+	ActivityScheduledEvents map[int64]*history.ActivityScheduled
+	ActivityPromises        map[int64]*ActivityPromise
+	TimerCreatedEvents      map[int64]*history.TimerCreated
+	TimerPromises           map[int64]*TimerPromise
 	// start
 	WorkflowExecutionStartedEvent *history.WorkflowExecutionStarted
 	Version                       string
@@ -51,10 +51,10 @@ func NewWorkflowRuntime(
 		HistoryIndex:            0,
 		IsReplaying:             true,
 		SequenceNo:              1, // avoid 0
-		ActivityScheduledEvents: make(map[int32]*history.ActivityScheduled),
-		ActivityPromises:        make(map[int32]*ActivityPromise),
-		TimerCreatedEvents:      make(map[int32]*history.TimerCreated),
-		TimerPromises:           make(map[int32]*TimerPromise),
+		ActivityScheduledEvents: make(map[int64]*history.ActivityScheduled),
+		ActivityPromises:        make(map[int64]*ActivityPromise),
+		TimerCreatedEvents:      make(map[int64]*history.TimerCreated),
+		TimerPromises:           make(map[int64]*TimerPromise),
 	}
 }
 
@@ -340,7 +340,7 @@ func (w *WorkflowRuntime) handleTimerFired(event *history.HistoryEvent) error {
 	Sequence number
 */
 
-func (w *WorkflowRuntime) nextSeqNo() int32 {
+func (w *WorkflowRuntime) nextSeqNo() int64 {
 	result := w.SequenceNo
 	w.SequenceNo++
 	return result

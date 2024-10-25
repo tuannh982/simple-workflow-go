@@ -14,7 +14,6 @@ type db_workflow struct {
 	createdAt            int64
 	startAt              *int64
 	completedAt          *int64
-	lastUpdatedAt        *int64
 	currentRuntimeStatus string
 	input                []byte
 	resultOutput         *[]byte
@@ -25,34 +24,30 @@ type db_workflow struct {
 
 type db_history_event struct {
 	workflowID string
-	sequenceNo int32
+	sequenceNo int64
 	payload    []byte
 	// pkey (workflowID, sequenceNo)
 }
 
 type db_task struct {
-	sequenceNo int32
+	sequenceNo int64
 	workflowID string
 	taskType   string
 	lockedBy   *string
 	createdAt  int64
 	visibleAt  int64
 	payload    []byte
-	// pkey (sequenceNo auto inc)
+	// pkey (workflowID, sequenceNo)
 }
 
 type db_event struct {
-	sequenceNo int32
+	sequenceNo int64
 	workflowID string
 	lockedBy   *string
 	createdAt  int64
 	visibleAt  int64
 	payload    []byte
-	// pkey (sequenceNo auto inc)
-}
-
-func eventsKeys(sequenceNo int32) string {
-	return fmt.Sprintf("%d", sequenceNo)
+	// pkey (workflowID, sequenceNo)
 }
 
 type persistent struct {
@@ -60,7 +55,7 @@ type persistent struct {
 	history_events_pk map[string]*db_history_event
 	tasks_pk          map[string]*db_task
 	events_pk         map[string]*db_event
-	seqNo             int32
+	seqNo             int64
 }
 
 func NewPersistent() *persistent {
@@ -73,7 +68,7 @@ func NewPersistent() *persistent {
 	}
 }
 
-func (r *persistent) NextSeqNo() int32 {
+func (r *persistent) NextSeqNo() int64 {
 	result := r.seqNo
 	r.seqNo++
 	return result
@@ -145,13 +140,13 @@ func (r *persistent) GetWorkflowHistory(workflowID string) []*db_history_event {
 	return result
 }
 
-func (r *persistent) GetTask(seqNo int32) *db_task {
-	key := fmt.Sprintf("%d", seqNo)
+func (r *persistent) GetTask(taskID string) *db_task {
+	key := fmt.Sprintf("%s", taskID)
 	return r.tasks_pk[key]
 }
 
-func (r *persistent) RemoveTask(seqNo int32) {
-	key := fmt.Sprintf("%d", seqNo)
+func (r *persistent) RemoveTask(taskID string) {
+	key := fmt.Sprintf("%s", taskID)
 	delete(r.tasks_pk, key)
 }
 

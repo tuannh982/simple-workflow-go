@@ -5,12 +5,12 @@ import (
 )
 
 type ActivityScheduled struct {
-	TaskScheduledID int32
+	TaskScheduledID int64
 	Name            string
 	Input           []byte
 }
 
 type ActivityCompleted struct {
-	TaskScheduledID int32
+	TaskScheduledID int64
 	dto.ExecutionResult
 }

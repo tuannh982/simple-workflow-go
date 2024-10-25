@@ -15,6 +15,6 @@ func InjectActivityExecutionContext(ctx context.Context, activityExecutionContex
 	return context.WithValue(ctx, ActivityExecutionContextKey, activityExecutionContext)
 }
 
-func ExtractActivityExecutionContext(ctx context.Context) *ActivityExecutionContext {
+func MustExtractActivityExecutionContext(ctx context.Context) *ActivityExecutionContext {
 	return ctx.Value(ActivityExecutionContextKey).(*ActivityExecutionContext)
 }

@@ -20,6 +20,6 @@ func InjectWorkflowExecutionContext(ctx context.Context, workflowExecutionContex
 	return context.WithValue(ctx, WorkflowExecutionContextKey, workflowExecutionContext)
 }
 
-func ExtractWorkflowExecutionContext(ctx context.Context) *WorkflowExecutionContext {
+func MustExtractWorkflowExecutionContext(ctx context.Context) *WorkflowExecutionContext {
 	return ctx.Value(WorkflowExecutionContextKey).(*WorkflowExecutionContext)
 }
