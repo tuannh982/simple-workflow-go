@@ -51,12 +51,12 @@ func NewPSQLBackend(
 	}
 }
 
-func (b *be) Start(ctx context.Context) error {
+func (b *be) Start(_ context.Context) error {
 	// TODO ensure tables are setup
 	panic("implement me")
 }
 
-func (b *be) Stop(ctx context.Context) error {
+func (b *be) Stop(_ context.Context) error {
 	// do nothing
 	return nil
 }

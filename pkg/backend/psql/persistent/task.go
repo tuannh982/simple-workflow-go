@@ -106,9 +106,16 @@ func (r *taskRepository) GetAndLockAvailableTask(ctx context.Context, taskType t
 	uow := r.UnitOfWork(ctx)
 	var t *Task
 	result := uow.Tx.
-		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Clauses(
+			clause.Locking{Strength: "UPDATE"},
+			clause.Returning{},
+		).
 		Where("task_type = ? AND (locked_by IS NULL OR locked_by = ?)", taskType, lockedBy).
 		Order("last_touch ASC").
+		Updates(map[string]interface{}{
+			"locked_at":  time.Now().UnixMilli(),
+			"last_touch": time.Now().UnixMilli(),
+		}).
 		First(&t)
 	if result.Error != nil {
 		return nil, result.Error

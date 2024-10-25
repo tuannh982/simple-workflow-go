@@ -2,9 +2,12 @@ package persistent
 
 import (
 	"context"
+	"errors"
 	"github.com/tuannh982/simple-workflows-go/pkg/backend/psql/persistent/base"
 	"gorm.io/gorm"
 )
+
+var ErrWorkflowNotFound = errors.New("workflow not found")
 
 type Workflow struct {
 	ID                   string  `gorm:"column:id"`
@@ -54,6 +57,12 @@ func (r *workflowRepository) GetWorkflow(ctx context.Context, workflowID string)
 
 func (r *workflowRepository) UpdateWorkflow(ctx context.Context, workflowID string, workflow *Workflow) error {
 	uow := r.UnitOfWork(ctx)
-	result := uow.Tx.Save(workflow)
-	return result.Error
+	result := uow.Tx.Where("id = ?", workflowID).Updates(workflow)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrWorkflowNotFound
+	}
+	return nil
 }

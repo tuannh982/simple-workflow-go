@@ -14,8 +14,8 @@ import (
 
 type mockStruct struct{}
 
-func mockActivity1(_ context.Context, input *mockStruct) (*mockStruct, error) { panic("mock") }
-func mockActivity2(_ context.Context, input *mockStruct) (*mockStruct, error) { panic("mock") }
+func mockActivity1(_ context.Context, _ *mockStruct) (*mockStruct, error) { panic("mock") }
+func mockActivity2(_ context.Context, _ *mockStruct) (*mockStruct, error) { panic("mock") }
 
 func mockWorkflow1(ctx context.Context, input *mockStruct) (*mockStruct, error) {
 	var r *mockStruct
