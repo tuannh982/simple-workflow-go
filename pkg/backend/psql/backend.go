@@ -13,6 +13,7 @@ import (
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
 	"github.com/tuannh982/simple-workflows-go/pkg/utils/ptr"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"time"
 )
@@ -25,12 +26,14 @@ type be struct {
 	historyEventRepo persistent.HistoryEventRepository
 	taskRepo         persistent.TaskRepository
 	eventRepo        persistent.EventRepository
+	logger           *zap.Logger
 }
 
 func NewPSQLBackend(
 	lockedBy string,
 	dataConverter dataconverter.DataConverter,
 	db *gorm.DB,
+	logger *zap.Logger,
 ) backend.Backend {
 	workflowRepo := persistent.NewWorkflowRepository(db)
 	historyEventRepo := persistent.NewHistoryEventRepository(db)
@@ -44,6 +47,7 @@ func NewPSQLBackend(
 		historyEventRepo: historyEventRepo,
 		taskRepo:         taskRepo,
 		eventRepo:        eventRepo,
+		logger:           logger,
 	}
 }
 
@@ -237,12 +241,12 @@ func (b *be) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTask
 		uowCtx := unitOfWork.InjectCtx(ctx)
 		currentTimestampUTC := b.getCurrentTimestampLocal()
 		// touch to trigger transaction lock
-		err := b.taskRepo.TouchTask(uowCtx, result.Task.TaskID)
+		err := b.taskRepo.TouchTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID)
 		if err != nil {
 			return err
 		}
 		//
-		t, err := b.taskRepo.GetTask(uowCtx, result.Task.TaskID)
+		t, err := b.taskRepo.GetTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID)
 		if err != nil {
 			return err
 		}
@@ -271,7 +275,7 @@ func (b *be) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTask
 			}
 		}
 		// delete processed events, and move them to history
-		if err = b.eventRepo.DeleteEventsByWorkflowIDAndLockedBy(uowCtx, result.Task.WorkflowID, b.lockedBy); err != nil {
+		if _, err = b.eventRepo.DeleteEventsByWorkflowIDAndHeldBy(uowCtx, result.Task.WorkflowID, b.lockedBy); err != nil {
 			return err
 		}
 		lastSeqNo, err := b.historyEventRepo.GetLastHistorySeqNo(uowCtx, result.Task.WorkflowID)
@@ -384,7 +388,7 @@ func (b *be) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTask
 			return err
 		}
 		if isCompleted {
-			if err = b.taskRepo.DeleteTask(uowCtx, result.Task.TaskID); err != nil {
+			if err = b.taskRepo.DeleteTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID); err != nil {
 				return err
 			}
 		} else if shouldNotifyWorkflowTask {
@@ -398,7 +402,7 @@ func (b *be) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTask
 }
 
 func (b *be) AbandonWorkflowTask(ctx context.Context, t *task.WorkflowTask, reason *string) error {
-	return b.taskRepo.ReleaseTask(ctx, t.TaskID, task.TaskTypeWorkflow, b.lockedBy, reason)
+	return b.taskRepo.ReleaseTask(ctx, t.WorkflowID, t.TaskID, task.TaskTypeWorkflow, b.lockedBy, reason)
 }
 
 func (b *be) GetActivityTask(ctx context.Context) (result *task.ActivityTask, err error) {
@@ -435,12 +439,12 @@ func (b *be) CompleteActivityTask(ctx context.Context, result *task.ActivityTask
 		uowCtx := unitOfWork.InjectCtx(ctx)
 		currentTimestampUTC := b.getCurrentTimestampLocal()
 		// touch to trigger transaction lock
-		err := b.taskRepo.TouchTask(uowCtx, result.Task.TaskID)
+		err := b.taskRepo.TouchTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID)
 		if err != nil {
 			return err
 		}
 		//
-		err = b.taskRepo.DeleteTask(uowCtx, result.Task.TaskID)
+		err = b.taskRepo.DeleteTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID)
 		if err != nil {
 			return err
 		}
@@ -477,5 +481,5 @@ func (b *be) CompleteActivityTask(ctx context.Context, result *task.ActivityTask
 }
 
 func (b *be) AbandonActivityTask(ctx context.Context, t *task.ActivityTask, reason *string) error {
-	return b.taskRepo.ReleaseTask(ctx, t.TaskID, task.TaskTypeActivity, b.lockedBy, reason)
+	return b.taskRepo.ReleaseTask(ctx, t.WorkflowID, t.TaskID, task.TaskTypeActivity, b.lockedBy, reason)
 }
