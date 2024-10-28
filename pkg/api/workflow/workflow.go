@@ -9,12 +9,12 @@ import (
 )
 
 func GetVersion(ctx context.Context) string {
-	workflowCtx := workflow.ExtractWorkflowExecutionContext(ctx)
+	workflowCtx := workflow.MustExtractWorkflowExecutionContext(ctx)
 	return workflowCtx.WorkflowRuntime.Version
 }
 
 func CallActivity[T any, R any](ctx context.Context, activity types.Activity[T, R], input *T) awaitable.Awaitable[*R] {
-	workflowCtx := workflow.ExtractWorkflowExecutionContext(ctx)
+	workflowCtx := workflow.MustExtractWorkflowExecutionContext(ctx)
 	promise := workflowCtx.WorkflowRuntime.ScheduleNewActivity(activity, input)
 	return &AwaitableActivity[R]{
 		Activity: activity,
@@ -23,7 +23,7 @@ func CallActivity[T any, R any](ctx context.Context, activity types.Activity[T, 
 }
 
 func WaitFor(ctx context.Context, delay time.Duration) {
-	workflowCtx := workflow.ExtractWorkflowExecutionContext(ctx)
+	workflowCtx := workflow.MustExtractWorkflowExecutionContext(ctx)
 	fireAtTimestamp := workflowCtx.WorkflowRuntime.CurrentTimestamp + delay.Milliseconds()
 	promise := workflowCtx.WorkflowRuntime.CreateTimer(fireAtTimestamp)
 	a := &AwaitableTimer{

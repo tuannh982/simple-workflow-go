@@ -17,7 +17,7 @@ type activityTaskProcessor struct {
 func NewActivityTaskProcessor(
 	be backend.Backend,
 	executor ActivityTaskExecutor,
-	logger *zap.Logger,
+	_ *zap.Logger,
 ) worker.TaskProcessor[task.ActivityTask, task.ActivityTaskResult] {
 	return &activityTaskProcessor{
 		be:       be,

@@ -9,9 +9,9 @@ import (
 	"github.com/tuannh982/simple-workflows-go/pkg/dto"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflows-go/pkg/utils/collections"
 	"github.com/tuannh982/simple-workflows-go/pkg/utils/ptr"
 	"github.com/tuannh982/simple-workflows-go/pkg/utils/worker"
-	"github.com/tuannh982/simple-workflows-go/test/utils"
 	"os"
 	"sort"
 	"sync"
@@ -20,7 +20,7 @@ import (
 
 type mockBackend struct {
 	dataConverter  dataconverter.DataConverter
-	persistent     *persistent
+	persistent     *MockPersistent
 	thisInstanceID string
 	*sync.Mutex
 }
@@ -34,21 +34,17 @@ func NewMockBackend(dataConverter dataconverter.DataConverter) backend.Backend {
 	thisInstanceID := fmt.Sprintf("%s_%d", hostname, now)
 	return &mockBackend{
 		dataConverter:  dataConverter,
-		persistent:     NewPersistent(),
+		persistent:     NewMockPersistent(),
 		thisInstanceID: thisInstanceID,
 		Mutex:          &sync.Mutex{},
 	}
 }
 
-func (m *mockBackend) Start(ctx context.Context) error { return nil }
-
-func (m *mockBackend) Stop(ctx context.Context) error { return nil }
-
 func (m *mockBackend) DataConverter() dataconverter.DataConverter {
 	return m.dataConverter
 }
 
-func (m *mockBackend) CreateWorkflow(ctx context.Context, info *history.WorkflowExecutionStarted) error {
+func (m *mockBackend) CreateWorkflow(_ context.Context, info *history.WorkflowExecutionStarted) error {
 	m.Lock()
 	defer m.Unlock()
 	now := time.Now().UnixMilli()
@@ -56,7 +52,7 @@ func (m *mockBackend) CreateWorkflow(ctx context.Context, info *history.Workflow
 	if info.ParentWorkflowInfo != nil {
 		parentWorkflowID = &info.ParentWorkflowInfo.WorkflowID
 	}
-	workflow := &db_workflow{
+	workflow := &MockDbWorkflow{
 		id:                   info.WorkflowID,
 		name:                 info.Name,
 		version:              info.Version,
@@ -65,7 +61,7 @@ func (m *mockBackend) CreateWorkflow(ctx context.Context, info *history.Workflow
 		input:                info.Input,
 		parentWorkflowID:     parentWorkflowID,
 	}
-	workflowTask := &db_task{
+	workflowTask := &MockDbTask{
 		sequenceNo: m.persistent.NextSeqNo(),
 		workflowID: info.WorkflowID,
 		taskType:   string(task.TaskTypeWorkflow),
@@ -80,7 +76,7 @@ func (m *mockBackend) CreateWorkflow(ctx context.Context, info *history.Workflow
 	if err != nil {
 		return err
 	}
-	event := &db_event{
+	event := &MockDbEvent{
 		sequenceNo: m.persistent.NextSeqNo(),
 		workflowID: info.WorkflowID,
 		createdAt:  now,
@@ -93,7 +89,7 @@ func (m *mockBackend) CreateWorkflow(ctx context.Context, info *history.Workflow
 	return nil
 }
 
-func (m *mockBackend) GetWorkflowResult(ctx context.Context, name string, workflowID string) (*dto.WorkflowExecutionResult, error) {
+func (m *mockBackend) GetWorkflowResult(_ context.Context, name string, workflowID string) (*dto.WorkflowExecutionResult, error) {
 	m.Lock()
 	defer m.Unlock()
 	w := m.persistent.GetWorkflow(workflowID)
@@ -105,7 +101,7 @@ func (m *mockBackend) GetWorkflowResult(ctx context.Context, name string, workfl
 	}
 	executionResult := dto.ExecutionResult{
 		Result: w.resultOutput,
-		Error:  utils.Map(w.resultError, func(a string) dto.Error { return dto.Error{Message: a} }),
+		Error:  collections.Map(w.resultError, func(a string) dto.Error { return dto.Error{Message: a} }),
 	}
 	return &dto.WorkflowExecutionResult{
 		WorkflowID:      w.id,
@@ -115,7 +111,7 @@ func (m *mockBackend) GetWorkflowResult(ctx context.Context, name string, workfl
 	}, nil
 }
 
-func (m *mockBackend) AppendWorkflowEvent(ctx context.Context, workflowID string, event *history.HistoryEvent) error {
+func (m *mockBackend) AppendWorkflowEvent(_ context.Context, workflowID string, event *history.HistoryEvent) error {
 	m.Lock()
 	defer m.Unlock()
 	now := time.Now().UnixMilli()
@@ -123,7 +119,7 @@ func (m *mockBackend) AppendWorkflowEvent(ctx context.Context, workflowID string
 	if err != nil {
 		return err
 	}
-	e := &db_event{
+	e := &MockDbEvent{
 		sequenceNo: m.persistent.NextSeqNo(),
 		workflowID: workflowID,
 		createdAt:  now,
@@ -134,19 +130,19 @@ func (m *mockBackend) AppendWorkflowEvent(ctx context.Context, workflowID string
 	return nil
 }
 
-func (m *mockBackend) GetWorkflowTask(ctx context.Context) (*task.WorkflowTask, error) {
+func (m *mockBackend) GetWorkflowTask(_ context.Context) (*task.WorkflowTask, error) {
 	m.Lock()
 	defer m.Unlock()
 	now := time.Now().UnixMilli()
 	// get workflow that has pending events
-	availableTasks := m.persistent.FilterTasks(func(t *db_task) bool {
+	availableTasks := m.persistent.FilterTasks(func(t *MockDbTask) bool {
 		return t.taskType == string(task.TaskTypeWorkflow) &&
 			t.visibleAt < now &&
 			(t.lockedBy == nil || *t.lockedBy == m.thisInstanceID)
 
 	})
-	availableTasksMap := utils.ToMap(func(t *db_task) string { return t.workflowID }, availableTasks)
-	availableWorkflowEvents := m.persistent.FilterWorkflowEvents(func(e *db_event) bool {
+	availableTasksMap := collections.ToMap(func(t *MockDbTask) string { return t.workflowID }, availableTasks)
+	availableWorkflowEvents := m.persistent.FilterWorkflowEvents(func(e *MockDbEvent) bool {
 		if e.visibleAt < now {
 			_, ok := availableTasksMap[e.workflowID]
 			return ok
@@ -154,11 +150,11 @@ func (m *mockBackend) GetWorkflowTask(ctx context.Context) (*task.WorkflowTask, 
 			return false
 		}
 	})
-	availableWorkflowEventsGroupedByWorkflowID := utils.GroupBy(func(t *db_event) string { return t.workflowID }, availableWorkflowEvents)
+	availableWorkflowEventsGroupedByWorkflowID := collections.GroupBy(func(t *MockDbEvent) string { return t.workflowID }, availableWorkflowEvents)
 	if len(availableWorkflowEventsGroupedByWorkflowID) == 0 {
 		return nil, worker.ErrNoTask
 	}
-	selected, events := utils.FirstInMap(availableWorkflowEventsGroupedByWorkflowID)
+	selected, events := collections.FirstInMap(availableWorkflowEventsGroupedByWorkflowID)
 	for _, event := range events {
 		event.lockedBy = &m.thisInstanceID
 	}
@@ -171,17 +167,17 @@ func (m *mockBackend) GetWorkflowTask(ctx context.Context) (*task.WorkflowTask, 
 		return workflowHistoryEvents[i].sequenceNo < workflowHistoryEvents[j].sequenceNo
 	})
 	// craft task
-	oldEvents := utils.MapArray(workflowHistoryEvents, func(a *db_history_event) *history.HistoryEvent {
+	oldEvents := collections.MapArray(workflowHistoryEvents, func(a *MockDbHistoryEvent) *history.HistoryEvent {
 		return m.ForceUnmarshalHistoryEvent(a.payload)
 	})
-	newEvents := utils.MapArray(events, func(a *db_event) *history.HistoryEvent {
+	newEvents := collections.MapArray(events, func(a *MockDbEvent) *history.HistoryEvent {
 		return m.ForceUnmarshalHistoryEvent(a.payload)
 	})
 	// lock task
 	workflowTask.lockedBy = &m.thisInstanceID
 	// return
 	return &task.WorkflowTask{
-		SeqNo:          workflowTask.sequenceNo,
+		TaskID:         fmt.Sprintf("%d", workflowTask.sequenceNo),
 		WorkflowID:     selected,
 		FetchTimestamp: now,
 		OldEvents:      oldEvents,
@@ -189,11 +185,11 @@ func (m *mockBackend) GetWorkflowTask(ctx context.Context) (*task.WorkflowTask, 
 	}, nil
 }
 
-func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTaskResult) error {
+func (m *mockBackend) CompleteWorkflowTask(_ context.Context, result *task.WorkflowTaskResult) error {
 	m.Lock()
 	defer m.Unlock()
 	now := time.Now().UnixMilli()
-	if t := m.persistent.GetTask(result.Task.SeqNo); t != nil {
+	if t := m.persistent.GetTask(result.Task.TaskID); t != nil {
 		if t.taskType == string(task.TaskTypeWorkflow) && *t.lockedBy == m.thisInstanceID {
 			isCompleted := false
 			processedEvents := result.Task.NewEvents
@@ -216,7 +212,7 @@ func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.Wor
 			// delete processed events, and move them to history
 			m.persistent.DeleteEventsByWorkflowAndLock(result.Task.WorkflowID, m.thisInstanceID)
 			for _, event := range result.Task.NewEvents {
-				m.persistent.InsertHistoryEvent(&db_history_event{
+				m.persistent.InsertHistoryEvent(&MockDbHistoryEvent{
 					workflowID: result.Task.WorkflowID,
 					sequenceNo: m.persistent.NextSeqNo(),
 					payload:    m.ForceMarshalHistoryEvent(event),
@@ -228,7 +224,7 @@ func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.Wor
 				if err != nil {
 					return err
 				}
-				m.persistent.InsertTask(&db_task{
+				m.persistent.InsertTask(&MockDbTask{
 					sequenceNo: m.persistent.NextSeqNo(),
 					workflowID: result.Task.WorkflowID,
 					taskType:   string(task.TaskTypeActivity),
@@ -236,7 +232,7 @@ func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.Wor
 					visibleAt:  now,
 					payload:    b,
 				})
-				m.persistent.InsertEvent(&db_event{
+				m.persistent.InsertEvent(&MockDbEvent{
 					sequenceNo: m.persistent.NextSeqNo(),
 					workflowID: result.Task.WorkflowID,
 					createdAt:  now,
@@ -248,7 +244,7 @@ func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.Wor
 				})
 			}
 			for _, event := range result.PendingTimers {
-				m.persistent.InsertEvent(&db_event{
+				m.persistent.InsertEvent(&MockDbEvent{
 					sequenceNo: m.persistent.NextSeqNo(),
 					workflowID: result.Task.WorkflowID,
 					createdAt:  now,
@@ -258,7 +254,7 @@ func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.Wor
 						TimerCreated: event,
 					}),
 				})
-				m.persistent.InsertEvent(&db_event{
+				m.persistent.InsertEvent(&MockDbEvent{
 					sequenceNo: m.persistent.NextSeqNo(),
 					workflowID: result.Task.WorkflowID,
 					createdAt:  now,
@@ -270,7 +266,7 @@ func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.Wor
 				})
 			}
 			if result.WorkflowExecutionCompleted != nil {
-				m.persistent.InsertEvent(&db_event{
+				m.persistent.InsertEvent(&MockDbEvent{
 					sequenceNo: m.persistent.NextSeqNo(),
 					workflowID: result.Task.WorkflowID,
 					createdAt:  now,
@@ -282,7 +278,7 @@ func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.Wor
 				})
 			}
 			if isCompleted {
-				m.persistent.RemoveTask(result.Task.SeqNo)
+				m.persistent.RemoveTask(result.Task.TaskID)
 			}
 			return nil
 		}
@@ -290,11 +286,11 @@ func (m *mockBackend) CompleteWorkflowTask(ctx context.Context, result *task.Wor
 	return errors.New("unexpected error")
 }
 
-func (m *mockBackend) AbandonWorkflowTask(ctx context.Context, t *task.WorkflowTask, reason *string) error {
+func (m *mockBackend) AbandonWorkflowTask(_ context.Context, t *task.WorkflowTask, _ *string) error {
 	m.Lock()
 	defer m.Unlock()
 	// unlock task
-	if t := m.persistent.GetTask(t.SeqNo); t != nil {
+	if t := m.persistent.GetTask(t.TaskID); t != nil {
 		if t.taskType == string(task.TaskTypeWorkflow) && *t.lockedBy == m.thisInstanceID {
 			t.lockedBy = nil
 		}
@@ -302,11 +298,11 @@ func (m *mockBackend) AbandonWorkflowTask(ctx context.Context, t *task.WorkflowT
 	return nil
 }
 
-func (m *mockBackend) GetActivityTask(ctx context.Context) (*task.ActivityTask, error) {
+func (m *mockBackend) GetActivityTask(_ context.Context) (*task.ActivityTask, error) {
 	m.Lock()
 	defer m.Unlock()
 	now := time.Now().UnixMilli()
-	availableTasks := m.persistent.FilterTasks(func(t *db_task) bool {
+	availableTasks := m.persistent.FilterTasks(func(t *MockDbTask) bool {
 		return t.taskType == string(task.TaskTypeActivity) &&
 			t.visibleAt < now &&
 			(t.lockedBy == nil || *t.lockedBy == m.thisInstanceID)
@@ -315,7 +311,7 @@ func (m *mockBackend) GetActivityTask(ctx context.Context) (*task.ActivityTask, 
 	if len(availableTasks) == 0 {
 		return nil, worker.ErrNoTask
 	}
-	selected := utils.FirstInArray(availableTasks)
+	selected := collections.FirstInArray(availableTasks)
 	selected.lockedBy = &m.thisInstanceID
 	event := &history.ActivityScheduled{}
 	err := dto.Unmarshal(selected.payload, event)
@@ -323,19 +319,19 @@ func (m *mockBackend) GetActivityTask(ctx context.Context) (*task.ActivityTask, 
 		return nil, err
 	}
 	return &task.ActivityTask{
-		SeqNo:             selected.sequenceNo,
+		TaskID:            fmt.Sprintf("%d", selected.sequenceNo),
 		WorkflowID:        selected.workflowID,
 		TaskScheduleEvent: event,
 	}, nil
 }
 
-func (m *mockBackend) CompleteActivityTask(ctx context.Context, result *task.ActivityTaskResult) error {
+func (m *mockBackend) CompleteActivityTask(_ context.Context, result *task.ActivityTaskResult) error {
 	m.Lock()
 	defer m.Unlock()
 	now := time.Now().UnixMilli()
-	if t := m.persistent.GetTask(result.Task.SeqNo); t != nil {
+	if t := m.persistent.GetTask(result.Task.TaskID); t != nil {
 		if t.taskType == string(task.TaskTypeActivity) && *t.lockedBy == m.thisInstanceID {
-			m.persistent.RemoveTask(result.Task.SeqNo)
+			m.persistent.RemoveTask(result.Task.TaskID)
 			activityCompleted := &history.HistoryEvent{
 				Timestamp: now,
 				ActivityCompleted: &history.ActivityCompleted{
@@ -344,7 +340,7 @@ func (m *mockBackend) CompleteActivityTask(ctx context.Context, result *task.Act
 				},
 			}
 			payload := m.ForceMarshalHistoryEvent(activityCompleted)
-			m.persistent.InsertEvent(&db_event{
+			m.persistent.InsertEvent(&MockDbEvent{
 				sequenceNo: m.persistent.NextSeqNo(),
 				workflowID: result.Task.WorkflowID,
 				createdAt:  now,
@@ -357,11 +353,11 @@ func (m *mockBackend) CompleteActivityTask(ctx context.Context, result *task.Act
 	return errors.New("unexpected error")
 }
 
-func (m *mockBackend) AbandonActivityTask(ctx context.Context, t *task.ActivityTask, reason *string) error {
+func (m *mockBackend) AbandonActivityTask(_ context.Context, t *task.ActivityTask, _ *string) error {
 	m.Lock()
 	defer m.Unlock()
 	// unlock task
-	if t := m.persistent.GetTask(t.SeqNo); t != nil {
+	if t := m.persistent.GetTask(t.TaskID); t != nil {
 		if t.taskType == string(task.TaskTypeActivity) && *t.lockedBy == m.thisInstanceID {
 			t.lockedBy = nil
 		}

@@ -5,9 +5,9 @@ import (
 )
 
 type ParentWorkflowInfo struct {
-	TaskScheduledID int32
-	Name            int32
-	Version         int32
+	TaskScheduledID int64
+	Name            string
+	Version         string
 	WorkflowID      string
 }
 

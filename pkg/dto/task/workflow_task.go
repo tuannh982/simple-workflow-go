@@ -5,7 +5,7 @@ import (
 )
 
 type WorkflowTask struct {
-	SeqNo          int32
+	TaskID         string
 	WorkflowID     string
 	FetchTimestamp int64
 	OldEvents      []*history.HistoryEvent

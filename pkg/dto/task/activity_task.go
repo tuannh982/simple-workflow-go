@@ -6,7 +6,7 @@ import (
 )
 
 type ActivityTask struct {
-	SeqNo             int32
+	TaskID            string
 	WorkflowID        string
 	TaskScheduleEvent *history.ActivityScheduled
 }

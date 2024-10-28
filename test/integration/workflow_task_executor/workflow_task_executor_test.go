@@ -39,7 +39,7 @@ func TestWorkflowTaskExecutorCallActivity1(t *testing.T) {
 	taskResult, err := executor.Execute(context.TODO(), mockTask)
 	assert.NoError(t, err)
 	activityCall := taskResult.PendingActivities[0]
-	assert.Equal(t, int32(1), activityCall.TaskScheduledID)
+	assert.Equal(t, int64(1), activityCall.TaskScheduledID)
 	assert.Equal(t, fn.GetFunctionName(mockActivity1), activityCall.Name)
 }
 
@@ -170,7 +170,7 @@ func TestWorkflowTaskExecutorCallTimer(t *testing.T) {
 	taskResult, err := executor.Execute(context.TODO(), mockTask)
 	assert.NoError(t, err)
 	timerCall := taskResult.PendingTimers[0]
-	assert.Equal(t, int32(2), timerCall.TimerID)
+	assert.Equal(t, int64(2), timerCall.TimerID)
 	assert.Equal(t, now.UnixMilli()+50*time.Second.Milliseconds(), timerCall.FireAt)
 }
 
@@ -287,7 +287,7 @@ func TestWorkflowTaskExecutorCallActivity2(t *testing.T) {
 	taskResult, err := executor.Execute(context.TODO(), mockTask)
 	assert.NoError(t, err)
 	activityCall := taskResult.PendingActivities[0]
-	assert.Equal(t, int32(3), activityCall.TaskScheduledID)
+	assert.Equal(t, int64(3), activityCall.TaskScheduledID)
 	assert.Equal(t, fn.GetFunctionName(mockActivity2), activityCall.Name)
 }
 

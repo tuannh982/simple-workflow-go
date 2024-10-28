@@ -1,0 +1,10 @@
+services:
+  postgres:
+    image: 'bitnami/postgresql:latest'
+    restart: always
+    environment:
+      POSTGRESQL_USERNAME: "user"
+      POSTGRESQL_PASSWORD: "123456"
+      POSTGRESQL_MAX_CONNECTIONS: 1000
+    ports:
+      - "5432:5432"

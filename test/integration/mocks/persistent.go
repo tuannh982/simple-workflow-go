@@ -7,14 +7,13 @@ import (
 
 // represent DB tables
 
-type db_workflow struct {
+type MockDbWorkflow struct {
 	id                   string
 	name                 string
 	version              string
 	createdAt            int64
 	startAt              *int64
 	completedAt          *int64
-	lastUpdatedAt        *int64
 	currentRuntimeStatus string
 	input                []byte
 	resultOutput         *[]byte
@@ -23,70 +22,66 @@ type db_workflow struct {
 	// pkey (id)
 }
 
-type db_history_event struct {
+type MockDbHistoryEvent struct {
 	workflowID string
-	sequenceNo int32
+	sequenceNo int64
 	payload    []byte
 	// pkey (workflowID, sequenceNo)
 }
 
-type db_task struct {
-	sequenceNo int32
+type MockDbTask struct {
+	sequenceNo int64
 	workflowID string
 	taskType   string
 	lockedBy   *string
 	createdAt  int64
 	visibleAt  int64
 	payload    []byte
-	// pkey (sequenceNo auto inc)
+	// pkey (workflowID, sequenceNo)
 }
 
-type db_event struct {
-	sequenceNo int32
+type MockDbEvent struct {
+	sequenceNo int64
 	workflowID string
 	lockedBy   *string
 	createdAt  int64
 	visibleAt  int64
 	payload    []byte
-	// pkey (sequenceNo auto inc)
+	// pkey (workflowID, sequenceNo)
 }
 
-func eventsKeys(sequenceNo int32) string {
-	return fmt.Sprintf("%d", sequenceNo)
+type MockPersistent struct {
+	workflows_pk      map[string]*MockDbWorkflow
+	history_events_pk map[string]*MockDbHistoryEvent
+	tasks_pk          map[string]*MockDbTask
+	events_pk         map[string]*MockDbEvent
+	seqNo             int64
 }
 
-type persistent struct {
-	workflows_pk      map[string]*db_workflow
-	history_events_pk map[string]*db_history_event
-	tasks_pk          map[string]*db_task
-	events_pk         map[string]*db_event
-	seqNo             int32
-}
-
-func NewPersistent() *persistent {
-	return &persistent{
-		workflows_pk:      make(map[string]*db_workflow),
-		history_events_pk: make(map[string]*db_history_event),
-		tasks_pk:          make(map[string]*db_task),
-		events_pk:         make(map[string]*db_event),
+func NewMockPersistent() *MockPersistent {
+	return &MockPersistent{
+		workflows_pk:      make(map[string]*MockDbWorkflow),
+		history_events_pk: make(map[string]*MockDbHistoryEvent),
+		tasks_pk:          make(map[string]*MockDbTask),
+		events_pk:         make(map[string]*MockDbEvent),
 		seqNo:             1,
 	}
 }
 
-func (r *persistent) NextSeqNo() int32 {
+func (r *MockPersistent) NextSeqNo() int64 {
 	result := r.seqNo
 	r.seqNo++
 	return result
 }
 
-func (r *persistent) InsertWorkflow(workflow *db_workflow) {
+func (r *MockPersistent) InsertWorkflow(workflow *MockDbWorkflow) {
 	if r.workflows_pk[workflow.id] != nil {
 		panic(fmt.Sprintf("Duplicate workflow id %s", workflow.id))
 	}
 	r.workflows_pk[workflow.id] = workflow
 }
 
-func (r *persistent) InsertHistoryEvent(event *db_history_event) {
+func (r *MockPersistent) InsertHistoryEvent(event *MockDbHistoryEvent) {
 	key := fmt.Sprintf("%s_%d", event.workflowID, event.sequenceNo)
 	if r.history_events_pk[key] != nil {
 		panic(fmt.Sprintf("Duplicate history event id %s", key))
@@ -94,7 +89,7 @@ func (r *persistent) InsertHistoryEvent(event *db_history_event) {
 	r.history_events_pk[key] = event
 }
 
-func (r *persistent) InsertTask(task *db_task) {
+func (r *MockPersistent) InsertTask(task *MockDbTask) {
 	key := fmt.Sprintf("%d", task.sequenceNo)
 	if r.tasks_pk[key] != nil {
 		panic(fmt.Sprintf("Duplicate task id %s", key))
@@ -102,7 +97,7 @@ func (r *persistent) InsertTask(task *db_task) {
 	r.tasks_pk[key] = task
 }
 
-func (r *persistent) InsertEvent(event *db_event) {
+func (r *MockPersistent) InsertEvent(event *MockDbEvent) {
 	key := fmt.Sprintf("%d", event.sequenceNo)
 	if r.events_pk[key] != nil {
 		panic(fmt.Sprintf("Duplicate event id %s", key))
@@ -110,7 +105,7 @@ func (r *persistent) InsertEvent(event *db_event) {
 	r.events_pk[key] = event
 }
 
-func (r *persistent) DeleteEventsByWorkflowAndLock(workflowID string, lockedBy string) {
+func (r *MockPersistent) DeleteEventsByWorkflowAndLock(workflowID string, lockedBy string) {
 	for k, v := range r.events_pk {
 		if v.workflowID == workflowID && v.lockedBy != nil && *v.lockedBy == lockedBy {
 			delete(r.events_pk, k)
@@ -118,12 +113,12 @@ func (r *persistent) DeleteEventsByWorkflowAndLock(workflowID string, lockedBy s
 	}
 }
 
-func (r *persistent) GetWorkflow(workflowID string) *db_workflow {
+func (r *MockPersistent) GetWorkflow(workflowID string) *MockDbWorkflow {
 	return r.workflows_pk[workflowID]
 }
 
-func (r *persistent) FilterWorkflows(filter func(*db_workflow) bool) []*db_workflow {
-	result := make([]*db_workflow, 0)
+func (r *MockPersistent) FilterWorkflows(filter func(*MockDbWorkflow) bool) []*MockDbWorkflow {
+	result := make([]*MockDbWorkflow, 0)
 	for _, workflow := range r.workflows_pk {
 		if filter(workflow) {
 			result = append(result, workflow)
@@ -132,8 +127,8 @@ func (r *persistent) FilterWorkflows(filter func(*db_workflow) bool) []*db_workf
 	return result
 }
 
-func (r *persistent) GetWorkflowHistory(workflowID string) []*db_history_event {
-	result := make([]*db_history_event, 0)
+func (r *MockPersistent) GetWorkflowHistory(workflowID string) []*MockDbHistoryEvent {
+	result := make([]*MockDbHistoryEvent, 0)
 	for _, e := range r.history_events_pk {
 		if e.workflowID == workflowID {
 			result = append(result, e)
@@ -145,18 +140,18 @@ func (r *persistent) GetWorkflowHistory(workflowID string) []*db_history_event {
 	return result
 }
 
-func (r *persistent) GetTask(seqNo int32) *db_task {
-	key := fmt.Sprintf("%d", seqNo)
+func (r *MockPersistent) GetTask(taskID string) *MockDbTask {
+	key := fmt.Sprintf("%s", taskID)
 	return r.tasks_pk[key]
 }
 
-func (r *persistent) RemoveTask(seqNo int32) {
-	key := fmt.Sprintf("%d", seqNo)
+func (r *MockPersistent) RemoveTask(taskID string) {
+	key := fmt.Sprintf("%s", taskID)
 	delete(r.tasks_pk, key)
 }
 
-func (r *persistent) FilterTasks(filter func(*db_task) bool) []*db_task {
-	result := make([]*db_task, 0)
+func (r *MockPersistent) FilterTasks(filter func(*MockDbTask) bool) []*MockDbTask {
+	result := make([]*MockDbTask, 0)
 	for _, task := range r.tasks_pk {
 		if filter(task) {
 			result = append(result, task)
@@ -165,8 +160,8 @@ func (r *persistent) FilterTasks(filter func(*db_task) bool) []*db_task {
 	return result
 }
 
-func (r *persistent) GetWorkflowEvents(workflowID string) []*db_event {
-	result := make([]*db_event, 0)
+func (r *MockPersistent) GetWorkflowEvents(workflowID string) []*MockDbEvent {
+	result := make([]*MockDbEvent, 0)
 	for _, e := range r.events_pk {
 		if e.workflowID == workflowID {
 			result = append(result, e)
@@ -178,8 +173,8 @@ func (r *persistent) GetWorkflowEvents(workflowID string) []*db_event {
 	return result
 }
 
-func (r *persistent) FilterWorkflowEvents(filter func(*db_event) bool) []*db_event {
-	result := make([]*db_event, 0)
+func (r *MockPersistent) FilterWorkflowEvents(filter func(*MockDbEvent) bool) []*MockDbEvent {
+	result := make([]*MockDbEvent, 0)
 	for _, event := range r.events_pk {
 		if filter(event) {
 			result = append(result, event)

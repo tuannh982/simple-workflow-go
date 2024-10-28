@@ -44,9 +44,7 @@ loop:
 		case <-ctx.Done():
 			break loop
 		default:
-			w.logger.Debug("Fetching task")
 			task, err := w.taskProcessor.GetTask(ctx)
-			w.logger.Debug("Task fetched")
 			if err != nil {
 				if errors.Is(err, ErrNoTask) {
 					// expected error, do not log
@@ -55,6 +53,7 @@ loop:
 				}
 				w.bo.BackOff()
 			} else {
+				w.logger.Debug("Task fetched", zap.Any("task", task))
 				if err = w.processTask(ctx, task); err != nil {
 					w.logger.Error("Error while processing task", zap.Error(err))
 				}
@@ -81,6 +80,7 @@ func (w *WorkerThread[T, R]) processTask(ctx context.Context, task *T) (err erro
 			w.logger.Error("Error while abandoning task", zap.Error(err))
 		}
 	} else {
+		w.logger.Debug("Complete task", zap.Any("result", result))
 		err = w.taskProcessor.CompleteTask(ctx, result)
 		if err != nil {
 			w.logger.Error("Error while completing task", zap.Error(err))

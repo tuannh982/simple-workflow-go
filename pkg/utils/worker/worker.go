@@ -69,7 +69,7 @@ func (w *worker[T, R]) Start(ctx context.Context) {
 	}
 }
 
-func (w *worker[T, R]) Stop(ctx context.Context) {
+func (w *worker[T, R]) Stop(_ context.Context) {
 	w.cancel()
 	w.wg.Wait()
 }

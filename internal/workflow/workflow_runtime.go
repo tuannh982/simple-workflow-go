@@ -26,12 +26,12 @@ type WorkflowRuntime struct {
 	// runtime state
 	HistoryIndex            int
 	IsReplaying             bool
-	SequenceNo              int32
+	SequenceNo              int64
 	CurrentTimestamp        int64
-	ActivityScheduledEvents map[int32]*history.ActivityScheduled
-	ActivityPromises        map[int32]*ActivityPromise
-	TimerCreatedEvents      map[int32]*history.TimerCreated
-	TimerPromises           map[int32]*TimerPromise
+	ActivityScheduledEvents map[int64]*history.ActivityScheduled
+	ActivityPromises        map[int64]*ActivityPromise
+	TimerCreatedEvents      map[int64]*history.TimerCreated
+	TimerPromises           map[int64]*TimerPromise
 	// start
 	WorkflowExecutionStartedEvent *history.WorkflowExecutionStarted
 	Version                       string
@@ -51,10 +51,10 @@ func NewWorkflowRuntime(
 		HistoryIndex:            0,
 		IsReplaying:             true,
 		SequenceNo:              1, // avoid 0
-		ActivityScheduledEvents: make(map[int32]*history.ActivityScheduled),
-		ActivityPromises:        make(map[int32]*ActivityPromise),
-		TimerCreatedEvents:      make(map[int32]*history.TimerCreated),
-		TimerPromises:           make(map[int32]*TimerPromise),
+		ActivityScheduledEvents: make(map[int64]*history.ActivityScheduled),
+		ActivityPromises:        make(map[int64]*ActivityPromise),
+		TimerCreatedEvents:      make(map[int64]*history.TimerCreated),
+		TimerPromises:           make(map[int64]*TimerPromise),
 	}
 }
 
@@ -251,7 +251,14 @@ func (w *WorkflowRuntime) ScheduleNewActivity(activity any, input any) *Activity
 		Name:            name,
 		Input:           inputBytes,
 	}
-	w.ActivityScheduledEvents[taskScheduledID] = event
+	// this part is implement differently with DTFx, this allows some out-of-order task schedule event
+	if e, ok := w.ActivityScheduledEvents[taskScheduledID]; ok {
+		if e.TaskScheduledID != event.TaskScheduledID || e.Name != event.Name || !bytes.Equal(e.Input, event.Input) {
+			panic(ErrNonDeterministicError)
+		}
+	} else {
+		w.ActivityScheduledEvents[taskScheduledID] = event
+	}
 	w.ActivityPromises[taskScheduledID] = promise
 	return promise
 }
@@ -264,7 +271,9 @@ func (w *WorkflowRuntime) handleActivityScheduled(event *history.HistoryEvent) e
 			}
 			delete(w.ActivityScheduledEvents, e.TaskScheduledID)
 		} else {
-			return fmt.Errorf("activity scheduled event not found %v", e)
+			// in some cases, when using defer with await, the events might not be correct in order, but the code is still correct,
+			// so we will insert an event without promise here
+			w.ActivityScheduledEvents[e.TaskScheduledID] = e
 		}
 		return nil
 	} else {
@@ -301,7 +310,14 @@ func (w *WorkflowRuntime) CreateTimer(fireAt int64) *TimerPromise {
 		TimerID: timerID,
 		FireAt:  fireAt,
 	}
-	w.TimerCreatedEvents[timerID] = event
+	// this part is implement differently with DTFx, this allows some out-of-order task schedule event
+	if e, ok := w.TimerCreatedEvents[timerID]; ok {
+		if e.TimerID != event.TimerID || e.FireAt != event.FireAt {
+			panic(ErrNonDeterministicError)
+		}
+	} else {
+		w.TimerCreatedEvents[timerID] = event
+	}
 	w.TimerPromises[timerID] = promise
 	return promise
 }
@@ -314,7 +330,9 @@ func (w *WorkflowRuntime) handleTimerCreated(event *history.HistoryEvent) error 
 			}
 			delete(w.TimerCreatedEvents, e.TimerID)
 		} else {
-			return fmt.Errorf("timer created event not found %v", e)
+			// in some cases, when using defer with await, the events might not be correct in order, but the code is still correct,
+			// so we will insert an event without promise here
+			w.TimerCreatedEvents[e.TimerID] = e
 		}
 		return nil
 	} else {
@@ -340,7 +358,7 @@ func (w *WorkflowRuntime) handleTimerFired(event *history.HistoryEvent) error {
 	Sequence number
 */
 
-func (w *WorkflowRuntime) nextSeqNo() int32 {
+func (w *WorkflowRuntime) nextSeqNo() int64 {
 	result := w.SequenceNo
 	w.SequenceNo++
 	return result

@@ -21,7 +21,7 @@ type mockTaskProcessor struct {
 	sync.Mutex
 }
 
-func (m *mockTaskProcessor) GetTask(ctx context.Context) (*mockTask, error) {
+func (m *mockTaskProcessor) GetTask(_ context.Context) (*mockTask, error) {
 	m.Lock()
 	defer m.Unlock()
 	if m.numTasks > 0 {

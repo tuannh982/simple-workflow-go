@@ -9,8 +9,6 @@ import (
 )
 
 type Backend interface {
-	Start(context.Context) error
-	Stop(context.Context) error
 	DataConverter() dataconverter.DataConverter
 	CreateWorkflow(ctx context.Context, info *history.WorkflowExecutionStarted) error
 	GetWorkflowResult(ctx context.Context, name string, workflowID string) (*dto.WorkflowExecutionResult, error)
