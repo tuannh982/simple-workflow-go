@@ -10,17 +10,17 @@ import (
 var ErrWorkflowNotFound = errors.New("workflow not found")
 
 type Workflow struct {
-	ID                   string  `gorm:"column:id"`
-	Name                 string  `gorm:"column:name"`
-	Version              string  `gorm:"column:version"`
-	CreatedAt            int64   `gorm:"column:created_at"`
-	StartAt              *int64  `gorm:"column:start_at"`
-	CompletedAt          *int64  `gorm:"column:completed_at"`
-	CurrentRuntimeStatus string  `gorm:"column:current_runtime_status"`
-	Input                []byte  `gorm:"column:input"`
-	ResultOutput         *[]byte `gorm:"column:result_output"`
-	ResultError          *string `gorm:"column:result_error"`
-	ParentWorkflowID     *string `gorm:"column:parent_workflow_id"`
+	ID                   string  `gorm:"column:id;type:varchar(255);primaryKey"`
+	Name                 string  `gorm:"column:name;type:varchar(255)"`
+	Version              string  `gorm:"column:version;type:varchar(255)"`
+	CreatedAt            int64   `gorm:"column:created_at;type:bigint"`
+	StartAt              *int64  `gorm:"column:start_at;type:bigint"`
+	CompletedAt          *int64  `gorm:"column:completed_at;type:bigint"`
+	CurrentRuntimeStatus string  `gorm:"column:current_runtime_status;type:varchar(255)"`
+	Input                []byte  `gorm:"column:input;type:bytea"`
+	ResultOutput         *[]byte `gorm:"column:result_output;type:bytea"`
+	ResultError          *string `gorm:"column:result_error;type:text"`
+	ParentWorkflowID     *string `gorm:"column:parent_workflow_id;type:varchar(255)"`
 }
 
 type WorkflowRepository interface {
@@ -41,14 +41,14 @@ func NewWorkflowRepository(db *gorm.DB) WorkflowRepository {
 
 func (r *workflowRepository) InsertWorkflow(ctx context.Context, workflow *Workflow) error {
 	uow := r.UnitOfWork(ctx)
-	result := uow.Tx.Create(workflow)
+	result := uow.Tx.Model(&Workflow{}).Create(workflow)
 	return result.Error
 }
 
 func (r *workflowRepository) GetWorkflow(ctx context.Context, workflowID string) (*Workflow, error) {
 	uow := r.UnitOfWork(ctx)
-	var workflow *Workflow
-	result := uow.Tx.Where("id = ?", workflowID).First(workflow)
+	workflow := &Workflow{}
+	result := uow.Tx.Model(&Workflow{}).Where("id = ?", workflowID).First(workflow)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -57,7 +57,7 @@ func (r *workflowRepository) GetWorkflow(ctx context.Context, workflowID string)
 
 func (r *workflowRepository) UpdateWorkflow(ctx context.Context, workflowID string, workflow *Workflow) error {
 	uow := r.UnitOfWork(ctx)
-	result := uow.Tx.Where("id = ?", workflowID).Updates(workflow)
+	result := uow.Tx.Model(&Workflow{}).Where("id = ?", workflowID).Updates(workflow)
 	if result.Error != nil {
 		return result.Error
 	}

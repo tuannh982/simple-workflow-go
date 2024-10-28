@@ -13,8 +13,10 @@ import (
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
 	"github.com/tuannh982/simple-workflows-go/pkg/utils/ptr"
+	"github.com/tuannh982/simple-workflows-go/pkg/utils/worker"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"sync"
 	"time"
 )
 
@@ -27,6 +29,7 @@ type be struct {
 	taskRepo         persistent.TaskRepository
 	eventRepo        persistent.EventRepository
 	logger           *zap.Logger
+	*sync.Mutex
 }
 
 func NewPSQLBackend(
@@ -48,17 +51,8 @@ func NewPSQLBackend(
 		taskRepo:         taskRepo,
 		eventRepo:        eventRepo,
 		logger:           logger,
+		Mutex:            &sync.Mutex{},
 	}
-}
-
-func (b *be) Start(_ context.Context) error {
-	// TODO ensure tables are setup
-	panic("implement me")
-}
-
-func (b *be) Stop(_ context.Context) error {
-	// do nothing
-	return nil
 }
 
 func (b *be) DataConverter() dataconverter.DataConverter {
@@ -198,6 +192,9 @@ func (b *be) GetWorkflowTask(ctx context.Context) (result *task.WorkflowTask, er
 	currentTimestampUTC := b.getCurrentTimestampLocal()
 	t, err := b.taskRepo.GetAndLockAvailableTask(uowCtx, task.TaskTypeWorkflow, b.lockedBy)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, worker.ErrNoTask
+		}
 		return nil, err
 	}
 	pHistoryEvents, err := b.historyEventRepo.GetWorkflowHistory(uowCtx, t.WorkflowID)
@@ -226,6 +223,9 @@ func (b *be) GetWorkflowTask(ctx context.Context) (result *task.WorkflowTask, er
 		}
 		events[i] = he
 	}
+	if len(events) == 0 {
+		return nil, worker.ErrNoTask
+	}
 	return &task.WorkflowTask{
 		TaskID:         t.TaskID,
 		WorkflowID:     t.WorkflowID,
@@ -251,7 +251,7 @@ func (b *be) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTask
 			return err
 		}
 		if t.TaskType != string(task.TaskTypeWorkflow) || t.LockedBy == nil || *t.LockedBy != b.lockedBy {
-			return errors.New("task is not locked by this backend")
+			return fmt.Errorf("task %s of workflow %s is locked by %v, expect %s", t.TaskID, t.WorkflowID, t.LockedBy, b.lockedBy)
 		}
 		isCompleted := false
 		processedEvents := result.Task.NewEvents
@@ -273,6 +273,10 @@ func (b *be) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTask
 				}
 				isCompleted = true
 			}
+		}
+		err = b.workflowRepo.UpdateWorkflow(uowCtx, w.ID, w)
+		if err != nil {
+			return err
 		}
 		// delete processed events, and move them to history
 		if _, err = b.eventRepo.DeleteEventsByWorkflowIDAndHeldBy(uowCtx, result.Task.WorkflowID, b.lockedBy); err != nil {
@@ -418,6 +422,9 @@ func (b *be) GetActivityTask(ctx context.Context) (result *task.ActivityTask, er
 	uowCtx := unitOfWork.InjectCtx(ctx)
 	t, err := b.taskRepo.GetAndLockAvailableTask(uowCtx, task.TaskTypeActivity, b.lockedBy)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, worker.ErrNoTask
+		}
 		return nil, err
 	}
 	payload := t.Payload

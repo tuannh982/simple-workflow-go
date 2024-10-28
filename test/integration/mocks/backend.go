@@ -40,10 +40,6 @@ func NewMockBackend(dataConverter dataconverter.DataConverter) backend.Backend {
 	}
 }
 
-func (m *mockBackend) Start(_ context.Context) error { return nil }
-
-func (m *mockBackend) Stop(_ context.Context) error { return nil }
-
 func (m *mockBackend) DataConverter() dataconverter.DataConverter {
 	return m.dataConverter
 }
