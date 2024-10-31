@@ -60,20 +60,20 @@ long running operations, or costly actions which are not prefer to be re-execute
 
 ```go
 func GenerateNumber(seed int64, round int) int64 {
-	for _ = range round {
-		seed ^= seed << 13
-		seed ^= seed << 17
-		seed ^= seed << 5
-	}
-	return seed
+    for _ = range round {
+        seed ^= seed << 13
+        seed ^= seed << 17
+        seed ^= seed << 5
+    }
+    return seed
 }
 
 func GenerateRandomNumberActivity1(ctx context.Context, input *Seed) (*Int64, error) {
-	return &Int64{Value: GenerateNumber(input.Value, 19)}, nil
+    return &Int64{Value: GenerateNumber(input.Value, 19)}, nil
 }
 
 func GenerateRandomNumberActivity2(ctx context.Context, input *Seed) (*Int64, error) {
-	return &Int64{Value: GenerateNumber(input.Value, 23)}, nil
+    return &Int64{Value: GenerateNumber(input.Value, 23)}, nil
 }
 ```
 
@@ -141,36 +141,36 @@ Putting all pieces together, we can implement our worker program
 
 ```go
 func main() {
-	ctx := context.Background()
-	logger, err := zap.NewProduction()
-	if err != nil {
-		panic(err)
-	}
-	be, err := psql.InitBackend(logger)
-	if err != nil {
-		panic(err)
-	}
-	aw, err := worker2.NewActivityWorkersBuilder().WithBackend(be).WithLogger(logger).RegisterActivities(
-		GenerateRandomNumberActivity1,
-		GenerateRandomNumberActivity2,
-	).Build()
-	if err != nil {
-		panic(err)
-	}
-	ww, err := worker2.NewWorkflowWorkersBuilder().WithBackend(be).WithLogger(logger).RegisterWorkflows(
-		Sum2RandomNumberWorkflow,
-	).Build()
-	if err != nil {
-		panic(err)
-	}
-	aw.Start(ctx)
-	defer aw.Stop(ctx)
-	ww.Start(ctx)
-	defer ww.Stop(ctx)
-	//
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	<-sigs
+    ctx := context.Background()
+    logger, err := zap.NewProduction()
+    if err != nil {
+        panic(err)
+    }
+    be, err := psql.InitBackend(logger)
+    if err != nil {
+        panic(err)
+    }
+    aw, err := worker2.NewActivityWorkersBuilder().WithBackend(be).WithLogger(logger).RegisterActivities(
+        GenerateRandomNumberActivity1,
+        GenerateRandomNumberActivity2,
+    ).Build()
+    if err != nil {
+        panic(err)
+    }
+    ww, err := worker2.NewWorkflowWorkersBuilder().WithBackend(be).WithLogger(logger).RegisterWorkflows(
+        Sum2RandomNumberWorkflow,
+    ).Build()
+    if err != nil {
+        panic(err)
+    }
+    aw.Start(ctx)
+    defer aw.Stop(ctx)
+    ww.Start(ctx)
+    defer ww.Stop(ctx)
+    //
+    sigs := make(chan os.Signal, 1)
+    signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+    <-sigs
 }
 ```
 
@@ -193,9 +193,9 @@ err := client.ScheduleWorkflow(ctx, be, Sum2RandomNumberWorkflow, &Seed{
 
 ```go
 workflowResult, workflowErr, err := client.AwaitWorkflowResult(
-	ctx, 
-	be, 
-	Sum2RandomNumberWorkflow, 
-	workflowID, 
+    ctx, 
+    be, 
+    Sum2RandomNumberWorkflow, 
+    workflowID, 
 )
 ```
