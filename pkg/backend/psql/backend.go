@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/tuannh982/simple-workflows-go/pkg/backend"
 	"github.com/tuannh982/simple-workflows-go/pkg/backend/psql/persistent"
+	"github.com/tuannh982/simple-workflows-go/pkg/backend/psql/persistent/base"
 	"github.com/tuannh982/simple-workflows-go/pkg/backend/psql/persistent/uow"
 	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto"
@@ -66,6 +67,16 @@ func (b *be) getCurrentTimestamp(tx *gorm.DB) int64 {
 	return ts.timestamp
 }
 
+func (b *be) createUow(ctx context.Context, tx *gorm.DB) (context.Context, error) {
+	result := tx.Exec(fmt.Sprintf("SET TRANSACTION ISOLATION LEVEL %s", base.IsolationLevelSerializable))
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	unitOfWork := uow.NewUnitOfWork(tx)
+	uowCtx := unitOfWork.InjectCtx(ctx)
+	return uowCtx, nil
+}
+
 func (b *be) getCurrentTimestampLocal() int64 {
 	return time.Now().UnixMilli()
 }
@@ -76,8 +87,10 @@ func (b *be) newUuidString() string {
 
 func (b *be) CreateWorkflow(ctx context.Context, info *history.WorkflowExecutionStarted) error {
 	err := b.db.Transaction(func(tx *gorm.DB) error {
-		unitOfWork := uow.NewUnitOfWork(tx)
-		uowCtx := unitOfWork.InjectCtx(ctx)
+		uowCtx, err := b.createUow(ctx, tx)
+		if err != nil {
+			return err
+		}
 		currentTimestampUTC := b.getCurrentTimestampLocal()
 		var parentWorkflowID string
 		if info.ParentWorkflowInfo != nil {
@@ -126,7 +139,7 @@ func (b *be) CreateWorkflow(ctx context.Context, info *history.WorkflowExecution
 		}
 		return nil
 	})
-	return err
+	return HandleSQLError(err)
 }
 
 func (b *be) GetWorkflowResult(ctx context.Context, name string, workflowID string) (*dto.WorkflowExecutionResult, error) {
@@ -153,8 +166,10 @@ func (b *be) GetWorkflowResult(ctx context.Context, name string, workflowID stri
 
 func (b *be) AppendWorkflowEvent(ctx context.Context, workflowID string, event *history.HistoryEvent) error {
 	err := b.db.Transaction(func(tx *gorm.DB) error {
-		unitOfWork := uow.NewUnitOfWork(tx)
-		uowCtx := unitOfWork.InjectCtx(ctx)
+		uowCtx, err := b.createUow(ctx, tx)
+		if err != nil {
+			return err
+		}
 		currentTimestampUTC := b.getCurrentTimestampLocal()
 		historyEventBytes, err := b.dataConverter.Marshal(event)
 		if err != nil {
@@ -175,7 +190,7 @@ func (b *be) AppendWorkflowEvent(ctx context.Context, workflowID string, event *
 		}
 		return nil
 	})
-	return err
+	return HandleSQLError(err)
 }
 
 func (b *be) GetWorkflowTask(ctx context.Context) (result *task.WorkflowTask, err error) {
@@ -187,15 +202,17 @@ func (b *be) GetWorkflowTask(ctx context.Context) (result *task.WorkflowTask, er
 			tx.Commit()
 		}
 	}()
-	unitOfWork := uow.NewUnitOfWork(tx)
-	uowCtx := unitOfWork.InjectCtx(ctx)
+	uowCtx, err := b.createUow(ctx, tx)
+	if err != nil {
+		return nil, HandleSQLError(err)
+	}
 	currentTimestampUTC := b.getCurrentTimestampLocal()
 	t, err := b.taskRepo.GetAndLockAvailableTask(uowCtx, task.TaskTypeWorkflow, b.lockedBy)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, worker.ErrNoTask
 		}
-		return nil, err
+		return nil, HandleSQLError(err)
 	}
 	pHistoryEvents, err := b.historyEventRepo.GetWorkflowHistory(uowCtx, t.WorkflowID)
 	if err != nil {
@@ -237,11 +254,13 @@ func (b *be) GetWorkflowTask(ctx context.Context) (result *task.WorkflowTask, er
 
 func (b *be) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTaskResult) error {
 	err := b.db.Transaction(func(tx *gorm.DB) error {
-		unitOfWork := uow.NewUnitOfWork(tx)
-		uowCtx := unitOfWork.InjectCtx(ctx)
+		uowCtx, err := b.createUow(ctx, tx)
+		if err != nil {
+			return err
+		}
 		currentTimestampUTC := b.getCurrentTimestampLocal()
 		// touch to trigger transaction lock
-		err := b.taskRepo.TouchTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID)
+		err = b.taskRepo.TouchTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID)
 		if err != nil {
 			return err
 		}
@@ -402,11 +421,18 @@ func (b *be) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTask
 		}
 		return nil
 	})
-	return err
+	return HandleSQLError(err)
 }
 
 func (b *be) AbandonWorkflowTask(ctx context.Context, t *task.WorkflowTask, reason *string) error {
-	return b.taskRepo.ReleaseTask(ctx, t.WorkflowID, t.TaskID, task.TaskTypeWorkflow, b.lockedBy, reason)
+	err := b.db.Transaction(func(tx *gorm.DB) error {
+		uowCtx, err := b.createUow(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return b.taskRepo.ReleaseTask(uowCtx, t.WorkflowID, t.TaskID, task.TaskTypeWorkflow, b.lockedBy, reason)
+	})
+	return HandleSQLError(err)
 }
 
 func (b *be) GetActivityTask(ctx context.Context) (result *task.ActivityTask, err error) {
@@ -418,20 +444,22 @@ func (b *be) GetActivityTask(ctx context.Context) (result *task.ActivityTask, er
 			tx.Commit()
 		}
 	}()
-	unitOfWork := uow.NewUnitOfWork(tx)
-	uowCtx := unitOfWork.InjectCtx(ctx)
+	uowCtx, err := b.createUow(ctx, tx)
+	if err != nil {
+		return nil, HandleSQLError(err)
+	}
 	t, err := b.taskRepo.GetAndLockAvailableTask(uowCtx, task.TaskTypeActivity, b.lockedBy)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, worker.ErrNoTask
 		}
-		return nil, err
+		return nil, HandleSQLError(err)
 	}
 	payload := t.Payload
 	activityScheduled := &history.ActivityScheduled{}
 	err = b.dataConverter.Unmarshal(payload, activityScheduled)
 	if err != nil {
-		return nil, err
+		return nil, HandleSQLError(err)
 	}
 	return &task.ActivityTask{
 		TaskID:            t.TaskID,
@@ -442,11 +470,13 @@ func (b *be) GetActivityTask(ctx context.Context) (result *task.ActivityTask, er
 
 func (b *be) CompleteActivityTask(ctx context.Context, result *task.ActivityTaskResult) error {
 	err := b.db.Transaction(func(tx *gorm.DB) error {
-		unitOfWork := uow.NewUnitOfWork(tx)
-		uowCtx := unitOfWork.InjectCtx(ctx)
+		uowCtx, err := b.createUow(ctx, tx)
+		if err != nil {
+			return err
+		}
 		currentTimestampUTC := b.getCurrentTimestampLocal()
 		// touch to trigger transaction lock
-		err := b.taskRepo.TouchTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID)
+		err = b.taskRepo.TouchTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID)
 		if err != nil {
 			return err
 		}
@@ -484,9 +514,16 @@ func (b *be) CompleteActivityTask(ctx context.Context, result *task.ActivityTask
 		}
 		return nil
 	})
-	return err
+	return HandleSQLError(err)
 }
 
 func (b *be) AbandonActivityTask(ctx context.Context, t *task.ActivityTask, reason *string) error {
-	return b.taskRepo.ReleaseTask(ctx, t.WorkflowID, t.TaskID, task.TaskTypeActivity, b.lockedBy, reason)
+	err := b.db.Transaction(func(tx *gorm.DB) error {
+		uowCtx, err := b.createUow(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return b.taskRepo.ReleaseTask(uowCtx, t.WorkflowID, t.TaskID, task.TaskTypeActivity, b.lockedBy, reason)
+	})
+	return HandleSQLError(err)
 }

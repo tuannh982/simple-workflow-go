@@ -4,55 +4,36 @@ import (
 	"github.com/tuannh982/simple-workflows-go/pkg/backend"
 	"github.com/tuannh982/simple-workflows-go/pkg/backend/psql"
 	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
-	"github.com/tuannh982/simple-workflows-go/pkg/registry"
-	"github.com/tuannh982/simple-workflows-go/pkg/worker"
 	"go.uber.org/zap"
 	"os"
 )
 
-func InitBackend() (backend.Backend, error) {
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		return nil, err
-	}
+const (
+	DbHost     = "localhost"
+	DbPort     = 5432
+	DbName     = "postgres"
+	DbUser     = "user"
+	DbPassword = "123456"
+)
+
+func InitBackend(logger *zap.Logger) (backend.Backend, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, err
 	}
-	db, err := GetDB()
+	db, err := psql.Connect(DbHost, DbPort, DbUser, DbPassword, DbName, nil)
 	if err != nil {
 		return nil, err
 	}
-	err = psql.PrepareDB(db)
+	err = psql.PrepareDB(db) // auto-create table if not exists
 	if err != nil {
 		return nil, err
 	}
-	err = psql.TruncateDB(db)
+	err = psql.TruncateDB(db) // truncate DB data
 	if err != nil {
 		return nil, err
 	}
 	dataConverter := dataconverter.NewJsonDataConverter()
 	be := psql.NewPSQLBackend(hostname, dataConverter, db, logger)
 	return be, nil
-}
-
-func InitWorkers(be backend.Backend, logger *zap.Logger) (*worker.ActivityWorker, *worker.WorkflowWorker, error) {
-	ar := registry.NewActivityRegistry()
-	wr := registry.NewWorkflowRegistry()
-	err := ar.RegisterActivities(
-		InterBankTransferActivity,
-		CrossBankTransferActivity,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	err = wr.RegisterWorkflows(
-		PaymentWorkflow,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	aw := worker.NewActivityWorker("activity_worker_0", be, ar, be.DataConverter(), logger)
-	ww := worker.NewWorkflowWorker("workflow_worker_0", be, wr, be.DataConverter(), logger)
-	return aw, ww, nil
 }

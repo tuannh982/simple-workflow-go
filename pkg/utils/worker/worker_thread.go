@@ -37,7 +37,11 @@ func NewWorkerThread[T any, R any](
 }
 
 func (w *WorkerThread[T, R]) Run(ctx context.Context) {
-	defer w.wg.Done()
+	w.logger.Info("WorkerThread started")
+	defer func() {
+		w.logger.Info("WorkerThread completed")
+		w.wg.Done()
+	}()
 loop:
 	for {
 		select {
@@ -46,16 +50,16 @@ loop:
 		default:
 			task, err := w.taskProcessor.GetTask(ctx)
 			if err != nil {
-				if errors.Is(err, ErrNoTask) {
-					// expected error, do not log
-				} else {
+				if !(errors.Is(err, ErrNoTask) || errors.Is(err, SuppressedError)) {
 					w.logger.Error("Error while polling task", zap.Error(err))
 				}
 				w.bo.BackOff()
 			} else {
 				w.logger.Debug("Task fetched", zap.Any("task", task))
 				if err = w.processTask(ctx, task); err != nil {
-					w.logger.Error("Error while processing task", zap.Error(err))
+					if !errors.Is(err, SuppressedError) {
+						w.logger.Error("Error while processing task", zap.Error(err))
+					}
 				}
 				w.bo.Reset()
 			}
@@ -77,16 +81,22 @@ func (w *WorkerThread[T, R]) processTask(ctx context.Context, task *T) (err erro
 		w.logger.Error("Error while processing task", zap.Error(err))
 		err = w.taskProcessor.AbandonTask(ctx, task, ptr.Ptr(err.Error()))
 		if err != nil {
-			w.logger.Error("Error while abandoning task", zap.Error(err))
+			if !errors.Is(err, SuppressedError) {
+				w.logger.Error("Error while abandoning task", zap.Error(err))
+			}
 		}
 	} else {
 		w.logger.Debug("Complete task", zap.Any("result", result))
 		err = w.taskProcessor.CompleteTask(ctx, result)
 		if err != nil {
-			w.logger.Error("Error while completing task", zap.Error(err))
+			if !errors.Is(err, SuppressedError) {
+				w.logger.Error("Error while completing task", zap.Error(err))
+			}
 			err = w.taskProcessor.AbandonTask(ctx, task, nil)
 			if err != nil {
-				w.logger.Error("Error while abandoning task", zap.Error(err))
+				if !errors.Is(err, SuppressedError) {
+					w.logger.Error("Error while abandoning task", zap.Error(err))
+				}
 			}
 		}
 	}

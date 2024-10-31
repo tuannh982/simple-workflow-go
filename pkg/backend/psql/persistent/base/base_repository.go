@@ -7,6 +7,10 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	IsolationLevelSerializable = "SERIALIZABLE"
+)
+
 type BaseRepository struct {
 	DB *gorm.DB
 }
