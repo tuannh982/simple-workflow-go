@@ -1,4 +1,4 @@
-package psql
+package bank_transfer
 
 import (
 	"context"
@@ -7,26 +7,23 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/tuannh982/simple-workflows-go/pkg/api/client"
+	worker2 "github.com/tuannh982/simple-workflows-go/pkg/api/worker"
+	"github.com/tuannh982/simple-workflows-go/pkg/utils/commons"
+	"github.com/tuannh982/simple-workflows-go/test/e2e/psql"
 	"go.uber.org/zap"
 	"testing"
 )
-
-func Must(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
 
 func InitMocks() {
 	mockPaymentDB = NewMockPaymentDB()
 	bankA := NewMockBank("A")
 	bankB := NewMockBank("B")
-	Must(mockPaymentDB.AddBank(bankA))
-	Must(mockPaymentDB.AddBank(bankB))
-	Must(bankA.AddAccount("A_1", 1000))
-	Must(bankA.AddAccount("A_2", 1000))
-	Must(bankB.AddAccount("B_1", 1000))
-	Must(bankB.AddAccount("B_2", 1000))
+	commons.Must(mockPaymentDB.AddBank(bankA))
+	commons.Must(mockPaymentDB.AddBank(bankB))
+	commons.Must(bankA.AddAccount("A_1", 1000))
+	commons.Must(bankA.AddAccount("A_2", 1000))
+	commons.Must(bankB.AddAccount("B_1", 1000))
+	commons.Must(bankB.AddAccount("B_2", 1000))
 	bankB.InjectTransferError(func(from string, to string, amount int) error {
 		if to == "B_2" {
 			return errors.New("account locked")
@@ -39,14 +36,32 @@ func InitLogger() (*zap.Logger, error) {
 	return zap.NewProduction()
 }
 
+// TODO FIXME sometime this test is flaky because the mock objects implementation is not deterministic
 func Test(t *testing.T) {
 	InitMocks()
 	ctx := context.Background()
 	logger, err := InitLogger()
 	assert.NoError(t, err)
-	be, err := InitBackend()
+	be, err := psql.InitBackend(logger)
 	assert.NoError(t, err)
-	aw, ww, err := InitWorkers(be, logger)
+	aw, err := worker2.NewActivityWorkersBuilder().
+		WithName("[e2e test] ActivityWorker").
+		WithBackend(be).
+		WithLogger(logger).
+		RegisterActivities(
+			InterBankTransferActivity,
+			CrossBankTransferActivity,
+		).
+		Build()
+	assert.NoError(t, err)
+	ww, err := worker2.NewWorkflowWorkersBuilder().
+		WithName("[e2e test] WorkflowWorker").
+		WithBackend(be).
+		WithLogger(logger).
+		RegisterWorkflows(
+			PaymentWorkflow,
+		).
+		Build()
 	assert.NoError(t, err)
 	aw.Start(ctx)
 	defer aw.Stop(ctx)

@@ -1,4 +1,4 @@
-package psql
+package bank_transfer
 
 import (
 	"fmt"

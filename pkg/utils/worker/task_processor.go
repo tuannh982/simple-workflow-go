@@ -6,6 +6,7 @@ import (
 )
 
 var ErrNoTask = errors.New("no task found")
+var SuppressedError = errors.New("suppressed error")
 
 type TaskProcessor[T any, R any] interface {
 	GetTask(ctx context.Context) (*T, error)
