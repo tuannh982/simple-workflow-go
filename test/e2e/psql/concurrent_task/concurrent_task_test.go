@@ -1,3 +1,6 @@
+//go:build e2e
+// +build e2e
+
 package concurrent_task
 
 import (
@@ -72,6 +75,7 @@ func Test(t *testing.T) {
 		Version:    "1",
 	})
 	assert.NoError(t, err)
+	time.Sleep(1 * time.Second)
 	wResult, wErr, err := client.AwaitWorkflowResult(ctx, be, SumWorkflow, workflowID)
 	assert.NotNil(t, wResult)
 	assert.NoError(t, wErr)

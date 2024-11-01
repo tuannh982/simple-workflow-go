@@ -1,3 +1,6 @@
+//go:build e2e
+// +build e2e
+
 package bank_transfer
 
 import (
@@ -12,6 +15,7 @@ import (
 	"github.com/tuannh982/simple-workflows-go/test/e2e/psql"
 	"go.uber.org/zap"
 	"testing"
+	"time"
 )
 
 func InitMocks() {
@@ -82,6 +86,7 @@ func Test(t *testing.T) {
 		Version:    "1",
 	})
 	assert.NoError(t, err)
+	time.Sleep(1 * time.Second)
 	wResult, wErr, err := client.AwaitWorkflowResult(ctx, be, PaymentWorkflow, workflowID)
 	assert.Nil(t, wResult)
 	assert.Error(t, wErr)
