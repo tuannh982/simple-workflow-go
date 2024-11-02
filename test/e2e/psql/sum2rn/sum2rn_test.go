@@ -1,3 +1,6 @@
+//go:build e2e
+// +build e2e
+
 package concurrent_task
 
 import (
@@ -10,6 +13,7 @@ import (
 	"github.com/tuannh982/simple-workflows-go/test/e2e/psql"
 	"go.uber.org/zap"
 	"testing"
+	"time"
 )
 
 func InitLogger() (*zap.Logger, error) {
@@ -59,6 +63,7 @@ func Test(t *testing.T) {
 		Version:    "1",
 	})
 	assert.NoError(t, err)
+	time.Sleep(1 * time.Second)
 	wResult, wErr, err := client.AwaitWorkflowResult(ctx, be, Sum2RandomNumberWorkflow, workflowID)
 	assert.NotNil(t, wResult)
 	assert.NoError(t, wErr)

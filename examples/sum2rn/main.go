@@ -2,8 +2,7 @@ package main
 
 import (
 	"context"
-	worker2 "github.com/tuannh982/simple-workflows-go/pkg/api/worker"
-	"github.com/tuannh982/simple-workflows-go/test/e2e/psql"
+	"github.com/tuannh982/simple-workflows-go/pkg/api/worker"
 	"go.uber.org/zap"
 	"os"
 	"os/signal"
@@ -16,18 +15,18 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	be, err := psql.InitBackend(logger)
+	be, err := InitBackend(logger)
 	if err != nil {
 		panic(err)
 	}
-	aw, err := worker2.NewActivityWorkersBuilder().WithBackend(be).WithLogger(logger).RegisterActivities(
+	aw, err := worker.NewActivityWorkersBuilder().WithBackend(be).WithLogger(logger).RegisterActivities(
 		GenerateRandomNumberActivity1,
 		GenerateRandomNumberActivity2,
 	).Build()
 	if err != nil {
 		panic(err)
 	}
-	ww, err := worker2.NewWorkflowWorkersBuilder().WithBackend(be).WithLogger(logger).RegisterWorkflows(
+	ww, err := worker.NewWorkflowWorkersBuilder().WithBackend(be).WithLogger(logger).RegisterWorkflows(
 		Sum2RandomNumberWorkflow,
 	).Build()
 	if err != nil {

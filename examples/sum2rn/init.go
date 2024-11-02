@@ -1,7 +1,4 @@
-//go:build e2e
-// +build e2e
-
-package psql
+package main
 
 import (
 	"github.com/tuannh982/simple-workflows-go/pkg/backend"
