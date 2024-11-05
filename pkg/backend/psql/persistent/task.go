@@ -96,9 +96,6 @@ func (r *taskRepository) TouchTask(ctx context.Context, workflowID string, taskI
 	if result.Error != nil {
 		return result.Error
 	}
-	if result.RowsAffected == 0 {
-		return ErrTaskLost
-	}
 	return nil
 }
 
@@ -133,9 +130,6 @@ func (r *taskRepository) ResetTaskLastTouchTimestamp(ctx context.Context, workfl
 	})
 	if result.Error != nil {
 		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return ErrTaskLost
 	}
 	return nil
 }

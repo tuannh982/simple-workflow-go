@@ -24,11 +24,11 @@ func init() {
 
 func main() {
 	ctx := context.Background()
-	logger, err := zap.NewProduction()
+	logger, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)
 	}
-	be, err := sum2rn.InitBackend(logger)
+	be, err := examples.InitPSQLBackend(logger)
 	if err != nil {
 		panic(err)
 	}

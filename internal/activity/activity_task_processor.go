@@ -18,7 +18,7 @@ func NewActivityTaskProcessor(
 	be backend.Backend,
 	executor ActivityTaskExecutor,
 	_ *zap.Logger,
-) worker.TaskProcessor[task.ActivityTask, task.ActivityTaskResult] {
+) worker.TaskProcessor[*task.ActivityTask, *task.ActivityTaskResult] {
 	return &activityTaskProcessor{
 		be:       be,
 		executor: executor,

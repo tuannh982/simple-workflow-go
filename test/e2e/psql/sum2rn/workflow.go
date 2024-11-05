@@ -16,8 +16,8 @@ type Int64 struct {
 	Value int64
 }
 
-func GenerateNumber(seed int64, round int) int64 {
-	for _ = range round {
+func GenerateNumber(seed int64, rounds int) int64 {
+	for _ = range rounds {
 		seed ^= seed << 13
 		seed ^= seed << 17
 		seed ^= seed << 5

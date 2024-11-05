@@ -9,12 +9,12 @@ import (
 	"time"
 )
 
-type Worker[T any, R any] interface {
+type Worker[T Summarizer, R Summarizer] interface {
 	Start(ctx context.Context)
 	Stop(ctx context.Context)
 }
 
-type worker[T any, R any] struct {
+type worker[T Summarizer, R Summarizer] struct {
 	name                    string
 	taskProcessor           TaskProcessor[T, R]
 	logger                  *zap.Logger
@@ -26,7 +26,7 @@ type worker[T any, R any] struct {
 	pollerBackoffMultiplier float64
 }
 
-func NewWorker[T any, R any](
+func NewWorker[T Summarizer, R Summarizer](
 	name string,
 	taskProcessor TaskProcessor[T, R],
 	logger *zap.Logger,

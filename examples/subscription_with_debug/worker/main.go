@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"github.com/tuannh982/simple-workflows-go/examples"
 	"github.com/tuannh982/simple-workflows-go/examples/subscription_with_debug"
 	"github.com/tuannh982/simple-workflows-go/pkg/api/worker"
-	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,15 +12,16 @@ import (
 
 func main() {
 	ctx := context.Background()
-	logger, err := zap.NewProduction()
+	logger, err := examples.GetLogger()
 	if err != nil {
 		panic(err)
 	}
-	be, err := subscription_with_debug.InitBackend(logger)
+	be, err := examples.InitPSQLBackend(logger)
 	if err != nil {
 		panic(err)
 	}
 	aw, err := worker.NewActivityWorkersBuilder().
+		WithName("demo activity worker").
 		WithBackend(be).
 		WithLogger(logger).
 		RegisterActivities(
@@ -30,6 +31,7 @@ func main() {
 		panic(err)
 	}
 	ww, err := worker.NewWorkflowWorkersBuilder().
+		WithName("demo workflow worker").
 		WithBackend(be).
 		WithLogger(logger).
 		RegisterWorkflows(
