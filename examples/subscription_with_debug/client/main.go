@@ -8,13 +8,15 @@ import (
 	"github.com/tuannh982/simple-workflows-go/pkg/api/client"
 	"github.com/tuannh982/simple-workflows-go/pkg/api/debug"
 	"go.uber.org/zap"
+	"time"
 )
 
 var (
-	workflowID  string
-	mode        string
-	totalAmount int64
-	cycles      int
+	workflowID    string
+	mode          string
+	totalAmount   int64
+	cycles        int
+	cycleDuration time.Duration
 )
 
 func init() {
@@ -22,16 +24,17 @@ func init() {
 	flag.StringVar(&mode, "mode", "schedule", "schedule|await|debug")
 	flag.Int64Var(&totalAmount, "totalAmount", 1000, "totalAmount")
 	flag.IntVar(&cycles, "cycles", 10, "cycles")
+	flag.DurationVar(&cycleDuration, "cycleDuration", time.Second*10, "cycleDuration")
 	flag.Parse()
 }
 
 func main() {
 	ctx := context.Background()
-	logger, err := zap.NewProduction()
+	logger, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)
 	}
-	be, err := subscription_with_debug.InitBackend(logger)
+	be, err := examples.InitPSQLBackend(logger)
 	if err != nil {
 		panic(err)
 	}
@@ -44,8 +47,9 @@ func main() {
 		examples.PrettyPrint(workflowErr)
 	} else if mode == "schedule" {
 		err = client.ScheduleWorkflow(ctx, be, subscription_with_debug.SubscriptionWorkflow, &subscription_with_debug.SubscriptionWorkflowInput{
-			TotalAmount: totalAmount,
-			Cycles:      cycles,
+			TotalAmount:   totalAmount,
+			Cycles:        cycles,
+			CycleDuration: cycleDuration,
 		}, client.WorkflowScheduleOptions{
 			WorkflowID: workflowID,
 			Version:    "1",

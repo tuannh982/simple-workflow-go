@@ -18,7 +18,7 @@ func NewWorkflowTaskProcessor(
 	be backend.Backend,
 	executor WorkflowTaskExecutor,
 	logger *zap.Logger,
-) worker.TaskProcessor[task.WorkflowTask, task.WorkflowTaskResult] {
+) worker.TaskProcessor[*task.WorkflowTask, *task.WorkflowTaskResult] {
 	return &workflowTaskProcessor{
 		be:       be,
 		executor: executor,

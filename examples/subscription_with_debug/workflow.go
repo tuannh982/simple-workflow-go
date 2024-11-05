@@ -13,8 +13,9 @@ type Void struct {
 }
 
 type SubscriptionWorkflowInput struct {
-	TotalAmount int64
-	Cycles      int
+	TotalAmount   int64
+	Cycles        int
+	CycleDuration time.Duration
 }
 
 type SubscriptionWorkflowOutput struct {
@@ -38,7 +39,7 @@ func PaymentActivity(ctx context.Context, input *PaymentInput) (*Void, error) {
 func SubscriptionWorkflow(ctx context.Context, input *SubscriptionWorkflowInput) (*SubscriptionWorkflowOutput, error) {
 	startTimestamp := workflow.GetWorkflowExecutionStartedTimestamp(ctx)
 	paymentAmounts := calculatePaymentCycles(input.TotalAmount, input.Cycles)
-	paymentTimings := calculatePaymentTimings(startTimestamp, input.Cycles)
+	paymentTimings := calculatePaymentTimings(startTimestamp, input.Cycles, input.CycleDuration)
 	//
 	var paid int64 = 0
 	var overdue int64 = 0

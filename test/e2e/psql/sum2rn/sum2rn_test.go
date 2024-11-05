@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/tuannh982/simple-workflows-go/pkg/api/client"
-	worker2 "github.com/tuannh982/simple-workflows-go/pkg/api/worker"
+	"github.com/tuannh982/simple-workflows-go/pkg/api/worker"
 	"github.com/tuannh982/simple-workflows-go/test/e2e/psql"
 	"go.uber.org/zap"
 	"testing"
@@ -26,7 +26,7 @@ func Test(t *testing.T) {
 	assert.NoError(t, err)
 	be, err := psql.InitBackend(logger)
 	assert.NoError(t, err)
-	aw, err := worker2.NewActivityWorkersBuilder().
+	aw, err := worker.NewActivityWorkersBuilder().
 		WithName("[e2e test] ActivityWorker").
 		WithBackend(be).
 		WithLogger(logger).
@@ -36,7 +36,7 @@ func Test(t *testing.T) {
 		).
 		Build()
 	assert.NoError(t, err)
-	ww, err := worker2.NewWorkflowWorkersBuilder().
+	ww, err := worker.NewWorkflowWorkersBuilder().
 		WithName("[e2e test] WorkflowWorker").
 		WithBackend(be).
 		WithLogger(logger).

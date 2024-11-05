@@ -9,8 +9,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/tuannh982/simple-workflows-go/pkg/api/client"
-	worker2 "github.com/tuannh982/simple-workflows-go/pkg/api/worker"
-	"github.com/tuannh982/simple-workflows-go/pkg/utils/worker"
+	"github.com/tuannh982/simple-workflows-go/pkg/api/worker"
+	"github.com/tuannh982/simple-workflows-go/pkg/worker/activity_worker"
+	"github.com/tuannh982/simple-workflows-go/pkg/worker/workflow_worker"
 	"github.com/tuannh982/simple-workflows-go/test/e2e/psql"
 	"go.uber.org/zap"
 	"testing"
@@ -27,27 +28,27 @@ func Test(t *testing.T) {
 	assert.NoError(t, err)
 	be, err := psql.InitBackend(logger)
 	assert.NoError(t, err)
-	aw, err := worker2.NewActivityWorkersBuilder().
+	aw, err := worker.NewActivityWorkersBuilder().
 		WithName("[e2e test] ActivityWorker").
 		WithBackend(be).
 		WithLogger(logger).
 		WithActivityWorkerOpts(
-			worker.WithMaxConcurrentTasksLimit(20),
-			worker.WithPollerInitialInterval(50*time.Millisecond),
-			worker.WithPollerMaxInterval(100*time.Millisecond),
+			activity_worker.WithMaxConcurrentTasksLimit(20),
+			activity_worker.WithPollerInitialBackoffInterval(50*time.Millisecond),
+			activity_worker.WithPollerMaxBackoffInterval(100*time.Millisecond),
 		).
 		RegisterActivities(
 			GenerateNumberActivity,
 		).
 		Build()
 	assert.NoError(t, err)
-	ww, err := worker2.NewWorkflowWorkersBuilder().
+	ww, err := worker.NewWorkflowWorkersBuilder().
 		WithName("[e2e test] WorkflowWorker").
 		WithBackend(be).
 		WithLogger(logger).
 		WithWorkflowWorkerOpts(
-			worker.WithMaxConcurrentTasksLimit(1),
-			worker.WithPollerInitialInterval(1000*time.Millisecond),
+			workflow_worker.WithMaxConcurrentTasksLimit(1),
+			workflow_worker.WithPollerInitialBackoffInterval(1000*time.Millisecond),
 		).
 		RegisterWorkflows(
 			SumWorkflow,

@@ -364,7 +364,7 @@ func (m *mockBackend) CompleteActivityTask(_ context.Context, result *task.Activ
 	return errors.New("unexpected error")
 }
 
-func (m *mockBackend) AbandonActivityTask(_ context.Context, t *task.ActivityTask, _ *string) error {
+func (m *mockBackend) AbandonActivityTask(_ context.Context, t *task.ActivityTask, _ *string, _ time.Duration) error {
 	m.Lock()
 	defer m.Unlock()
 	// unlock task

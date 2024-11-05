@@ -1,4 +1,4 @@
-package sum2rn
+package examples
 
 import (
 	"github.com/tuannh982/simple-workflows-go/pkg/backend"
@@ -16,7 +16,7 @@ const (
 	DbPassword = "123456"
 )
 
-func InitBackend(logger *zap.Logger) (backend.Backend, error) {
+func InitPSQLBackend(logger *zap.Logger) (backend.Backend, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, err

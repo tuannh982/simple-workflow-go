@@ -3,41 +3,41 @@ package worker
 import "time"
 
 type WorkerOptions struct {
-	maxConcurrentTasksLimit int
-	pollerInitialInterval   time.Duration
-	pollerMaxInterval       time.Duration
-	pollerBackoffMultiplier float64
+	MaxConcurrentTasksLimit      int
+	PollerInitialBackoffInterval time.Duration
+	PollerMaxBackoffInterval     time.Duration
+	PollerBackoffMultiplier      float64
 }
 
-func newWorkerOptions() *WorkerOptions {
+func NewWorkerOptions() *WorkerOptions {
 	return &WorkerOptions{
-		maxConcurrentTasksLimit: 1,
-		pollerInitialInterval:   500 * time.Millisecond,
-		pollerMaxInterval:       500 * time.Millisecond,
-		pollerBackoffMultiplier: 1,
+		MaxConcurrentTasksLimit:      1,
+		PollerInitialBackoffInterval: 500 * time.Millisecond,
+		PollerMaxBackoffInterval:     500 * time.Millisecond,
+		PollerBackoffMultiplier:      1,
 	}
 }
 
 func WithMaxConcurrentTasksLimit(limit int) func(*WorkerOptions) {
 	return func(options *WorkerOptions) {
-		options.maxConcurrentTasksLimit = limit
+		options.MaxConcurrentTasksLimit = limit
 	}
 }
 
-func WithPollerInitialInterval(duration time.Duration) func(*WorkerOptions) {
+func WithPollerInitialBackoffInterval(duration time.Duration) func(*WorkerOptions) {
 	return func(options *WorkerOptions) {
-		options.pollerInitialInterval = duration
+		options.PollerInitialBackoffInterval = duration
 	}
 }
 
-func WithPollerMaxInterval(duration time.Duration) func(*WorkerOptions) {
+func WithPollerMaxBackoffInterval(duration time.Duration) func(*WorkerOptions) {
 	return func(options *WorkerOptions) {
-		options.pollerMaxInterval = duration
+		options.PollerMaxBackoffInterval = duration
 	}
 }
 
 func WithPollerBackoffMultiplier(multiplier float64) func(*WorkerOptions) {
 	return func(options *WorkerOptions) {
-		options.pollerBackoffMultiplier = multiplier
+		options.PollerBackoffMultiplier = multiplier
 	}
 }

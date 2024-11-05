@@ -9,42 +9,51 @@ import (
 	"time"
 )
 
-type Worker[T any, R any] interface {
+type Worker[T Summarizer, R Summarizer] interface {
 	Start(ctx context.Context)
 	Stop(ctx context.Context)
 }
 
-type worker[T any, R any] struct {
-	name                    string
-	taskProcessor           TaskProcessor[T, R]
-	logger                  *zap.Logger
-	cancel                  context.CancelFunc
-	wg                      *sync.WaitGroup
-	maxConcurrentTasks      int
-	pollerInitialInterval   time.Duration
-	pollerMaxInterval       time.Duration
-	pollerBackoffMultiplier float64
+type worker[T Summarizer, R Summarizer] struct {
+	name                         string
+	taskProcessor                TaskProcessor[T, R]
+	logger                       *zap.Logger
+	cancel                       context.CancelFunc
+	wg                           *sync.WaitGroup
+	maxConcurrentTasks           int
+	pollerInitialBackoffInterval time.Duration
+	pollerMaxBackoffInterval     time.Duration
+	pollerBackoffMultiplier      float64
 }
 
-func NewWorker[T any, R any](
+func NewWorkerOpts[T Summarizer, R Summarizer](
 	name string,
 	taskProcessor TaskProcessor[T, R],
 	logger *zap.Logger,
 	opts ...func(*WorkerOptions),
 ) Worker[T, R] {
-	options := newWorkerOptions()
+	options := NewWorkerOptions()
 	for _, configure := range opts {
 		configure(options)
 	}
+	return NewWorker(name, taskProcessor, logger, options)
+}
+
+func NewWorker[T Summarizer, R Summarizer](
+	name string,
+	taskProcessor TaskProcessor[T, R],
+	logger *zap.Logger,
+	options *WorkerOptions,
+) Worker[T, R] {
 	return &worker[T, R]{
-		name:                    name,
-		taskProcessor:           taskProcessor,
-		logger:                  logger,
-		wg:                      &sync.WaitGroup{},
-		maxConcurrentTasks:      options.maxConcurrentTasksLimit,
-		pollerInitialInterval:   options.pollerInitialInterval,
-		pollerMaxInterval:       options.pollerMaxInterval,
-		pollerBackoffMultiplier: options.pollerBackoffMultiplier,
+		name:                         name,
+		taskProcessor:                taskProcessor,
+		logger:                       logger,
+		wg:                           &sync.WaitGroup{},
+		maxConcurrentTasks:           options.MaxConcurrentTasksLimit,
+		pollerInitialBackoffInterval: options.PollerInitialBackoffInterval,
+		pollerMaxBackoffInterval:     options.PollerMaxBackoffInterval,
+		pollerBackoffMultiplier:      options.PollerBackoffMultiplier,
 	}
 }
 
@@ -56,9 +65,9 @@ func (w *worker[T, R]) Start(ctx context.Context) {
 		thread := NewWorkerThread[T, R](
 			threadName,
 			w.taskProcessor,
-			backoff.NewExponentialBackOff(
-				w.pollerInitialInterval,
-				w.pollerMaxInterval,
+			backoff.NewExponentialBackoff(
+				w.pollerInitialBackoffInterval,
+				w.pollerMaxBackoffInterval,
 				w.pollerBackoffMultiplier,
 			),
 			w.wg,

@@ -4,25 +4,25 @@ import (
 	"time"
 )
 
-type BackOff interface {
+type Backoff interface {
 	Reset()
-	GetBackOffDuration() time.Duration
-	BackOff()
+	GetBackoffDuration() time.Duration
+	Backoff()
 }
 
-type exponentialBackOff struct {
+type exponentialBackoff struct {
 	initialDuration time.Duration
 	maxDuration     time.Duration
 	multiplier      float64
 	currentDuration time.Duration
 }
 
-func NewExponentialBackOff(
+func NewExponentialBackoff(
 	initialInterval time.Duration,
 	maxInterval time.Duration,
 	multiplier float64,
-) BackOff {
-	e := &exponentialBackOff{
+) Backoff {
+	e := &exponentialBackoff{
 		initialDuration: initialInterval,
 		maxDuration:     maxInterval,
 		multiplier:      multiplier,
@@ -31,15 +31,15 @@ func NewExponentialBackOff(
 	return e
 }
 
-func (e *exponentialBackOff) Reset() {
+func (e *exponentialBackoff) Reset() {
 	e.currentDuration = e.initialDuration
 }
 
-func (e *exponentialBackOff) GetBackOffDuration() time.Duration {
+func (e *exponentialBackoff) GetBackoffDuration() time.Duration {
 	return e.currentDuration
 }
 
-func (e *exponentialBackOff) BackOff() {
+func (e *exponentialBackoff) Backoff() {
 	var nextInterval time.Duration
 	if e.currentDuration >= e.maxDuration {
 		nextInterval = e.maxDuration
@@ -51,18 +51,18 @@ func (e *exponentialBackOff) BackOff() {
 	e.currentDuration = nextInterval
 }
 
-func CalculateNextBackOffDuration(
+func CalculateNextBackoffDuration(
 	initialDuration time.Duration,
 	maxDuration time.Duration,
 	multiplier float64,
 	currentDuration time.Duration,
 ) time.Duration {
-	bo := &exponentialBackOff{
+	bo := &exponentialBackoff{
 		initialDuration: initialDuration,
 		maxDuration:     maxDuration,
 		multiplier:      multiplier,
 		currentDuration: currentDuration,
 	}
-	bo.BackOff()
-	return bo.GetBackOffDuration()
+	bo.Backoff()
+	return bo.GetBackoffDuration()
 }

@@ -4,24 +4,34 @@ import (
 	"context"
 	"github.com/tuannh982/simple-workflows-go/pkg/backend"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflows-go/pkg/utils/backoff"
 	"github.com/tuannh982/simple-workflows-go/pkg/utils/worker"
 	"go.uber.org/zap"
+	"time"
 )
 
 type activityTaskProcessor struct {
-	be       backend.Backend
-	executor ActivityTaskExecutor
-	logger   *zap.Logger
+	be                     backend.Backend
+	executor               ActivityTaskExecutor
+	initialBackoffInterval time.Duration
+	maxBackoffInterval     time.Duration
+	backoffMultiplier      float64
+	logger                 *zap.Logger
 }
 
 func NewActivityTaskProcessor(
 	be backend.Backend,
 	executor ActivityTaskExecutor,
-	_ *zap.Logger,
-) worker.TaskProcessor[task.ActivityTask, task.ActivityTaskResult] {
+	logger *zap.Logger,
+	options *ActivityTaskProcessorOptions,
+) worker.TaskProcessor[*task.ActivityTask, *task.ActivityTaskResult] {
 	return &activityTaskProcessor{
-		be:       be,
-		executor: executor,
+		be:                     be,
+		executor:               executor,
+		initialBackoffInterval: options.InitialBackoffInterval,
+		maxBackoffInterval:     options.MaxBackoffInterval,
+		backoffMultiplier:      options.BackoffMultiplier,
+		logger:                 logger,
 	}
 }
 
@@ -38,5 +48,11 @@ func (a *activityTaskProcessor) CompleteTask(ctx context.Context, result *task.A
 }
 
 func (a *activityTaskProcessor) AbandonTask(ctx context.Context, task *task.ActivityTask, reason *string) error {
-	return a.be.AbandonActivityTask(ctx, task, reason)
+	numAttempted := task.NumAttempted
+	bo := backoff.NewExponentialBackoff(a.initialBackoffInterval, a.maxBackoffInterval, a.backoffMultiplier)
+	for range numAttempted {
+		bo.Backoff()
+	}
+	backoffDuration := bo.GetBackoffDuration()
+	return a.be.AbandonActivityTask(ctx, task, reason, backoffDuration)
 }

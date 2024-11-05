@@ -1,4 +1,4 @@
-package worker
+package activity_worker
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 
 type ActivityWorker struct {
 	name      string
-	processor worker.TaskProcessor[task.ActivityTask, task.ActivityTaskResult]
-	w         worker.Worker[task.ActivityTask, task.ActivityTaskResult]
+	processor worker.TaskProcessor[*task.ActivityTask, *task.ActivityTaskResult]
+	w         worker.Worker[*task.ActivityTask, *task.ActivityTaskResult]
 	logger    *zap.Logger
 }
 
@@ -25,13 +25,17 @@ func NewActivityWorker(
 	registry *registry.ActivityRegistry,
 	dataConverter dataconverter.DataConverter,
 	logger *zap.Logger,
-	opts ...func(options *worker.WorkerOptions),
+	opts ...func(options *ActivityWorkerOptions),
 ) *ActivityWorker {
+	options := NewActivityWorkerOptions()
+	for _, configure := range opts {
+		configure(options)
+	}
 	fqn := fmt.Sprintf("Activity worker %s", name)
 	childLogger := logger.With(zap.String("worker", name))
 	executor := activity.NewActivityTaskExecutor(registry, dataConverter, childLogger)
-	processor := activity.NewActivityTaskProcessor(be, executor, childLogger)
-	w := worker.NewWorker(fqn, processor, childLogger, opts...)
+	processor := activity.NewActivityTaskProcessor(be, executor, childLogger, options.ActivityTaskProcessorOptions)
+	w := worker.NewWorker(fqn, processor, childLogger, options.WorkerOptions)
 	return &ActivityWorker{
 		name:      name,
 		processor: processor,

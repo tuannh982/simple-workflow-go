@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/tuannh982/simple-workflows-go/examples"
 	"github.com/tuannh982/simple-workflows-go/examples/sum2rn"
 	"github.com/tuannh982/simple-workflows-go/pkg/api/worker"
 	"go.uber.org/zap"
@@ -12,15 +13,16 @@ import (
 
 func main() {
 	ctx := context.Background()
-	logger, err := zap.NewProduction()
+	logger, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)
 	}
-	be, err := sum2rn.InitBackend(logger)
+	be, err := examples.InitPSQLBackend(logger)
 	if err != nil {
 		panic(err)
 	}
 	aw, err := worker.NewActivityWorkersBuilder().
+		WithName("demo activity worker").
 		WithBackend(be).
 		WithLogger(logger).
 		RegisterActivities(
@@ -31,6 +33,7 @@ func main() {
 		panic(err)
 	}
 	ww, err := worker.NewWorkflowWorkersBuilder().
+		WithName("demo workflow worker").
 		WithBackend(be).
 		WithLogger(logger).
 		RegisterWorkflows(

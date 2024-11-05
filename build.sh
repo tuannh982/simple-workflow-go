@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -o pipefail
+
 go clean
 go clean -testcache
 go build ./...
