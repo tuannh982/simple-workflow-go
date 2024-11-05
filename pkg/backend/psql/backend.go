@@ -193,6 +193,23 @@ func (b *be) AppendWorkflowEvent(ctx context.Context, workflowID string, event *
 	return HandleSQLError(err)
 }
 
+func (b *be) GetWorkflowHistory(ctx context.Context, workflowID string) ([]*history.HistoryEvent, error) {
+	pHistoryEvents, err := b.historyEventRepo.GetWorkflowHistory(ctx, workflowID)
+	if err != nil {
+		return nil, err
+	}
+	historyEvents := make([]*history.HistoryEvent, len(pHistoryEvents))
+	for i, event := range pHistoryEvents {
+		he := &history.HistoryEvent{}
+		err = b.dataConverter.Unmarshal(event.Payload, he)
+		if err != nil {
+			return nil, err
+		}
+		historyEvents[i] = he
+	}
+	return historyEvents, nil
+}
+
 func (b *be) GetWorkflowTask(ctx context.Context) (result *task.WorkflowTask, err error) {
 	tx := b.db.Begin()
 	defer func() {

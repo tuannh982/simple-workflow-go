@@ -130,6 +130,17 @@ func (m *mockBackend) AppendWorkflowEvent(_ context.Context, workflowID string, 
 	return nil
 }
 
+func (m *mockBackend) GetWorkflowHistory(ctx context.Context, workflowID string) ([]*history.HistoryEvent, error) {
+	workflowHistoryEvents := m.persistent.GetWorkflowHistory(workflowID)
+	sort.Slice(workflowHistoryEvents, func(i, j int) bool {
+		return workflowHistoryEvents[i].sequenceNo < workflowHistoryEvents[j].sequenceNo
+	})
+	oldEvents := collections.MapArray(workflowHistoryEvents, func(a *MockDbHistoryEvent) *history.HistoryEvent {
+		return m.ForceUnmarshalHistoryEvent(a.payload)
+	})
+	return oldEvents, nil
+}
+
 func (m *mockBackend) GetWorkflowTask(_ context.Context) (*task.WorkflowTask, error) {
 	m.Lock()
 	defer m.Unlock()

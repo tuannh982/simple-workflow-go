@@ -6,11 +6,13 @@ import (
 
 type WorkflowExecutionContext struct {
 	WorkflowRuntime *WorkflowRuntime
+	UserDefinedVars map[string]any
 }
 
 func NewWorkflowExecutionContext(runtime *WorkflowRuntime) *WorkflowExecutionContext {
 	return &WorkflowExecutionContext{
 		WorkflowRuntime: runtime,
+		UserDefinedVars: make(map[string]any),
 	}
 }
 

@@ -31,3 +31,18 @@ func WaitFor(ctx context.Context, delay time.Duration) {
 	}
 	_, _ = a.Await()
 }
+
+func WaitUntil(ctx context.Context, until time.Time) {
+	workflowCtx := workflow.MustExtractWorkflowExecutionContext(ctx)
+	fireAtTimestamp := until.UnixMilli()
+	promise := workflowCtx.WorkflowRuntime.CreateTimer(fireAtTimestamp)
+	a := &AwaitableTimer{
+		Promise: promise,
+	}
+	_, _ = a.Await()
+}
+
+func SetVar[T any](ctx context.Context, name string, value T) {
+	workflowCtx := workflow.MustExtractWorkflowExecutionContext(ctx)
+	workflowCtx.UserDefinedVars[name] = value
+}

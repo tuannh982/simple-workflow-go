@@ -34,6 +34,7 @@ type WorkflowRuntime struct {
 	TimerPromises           map[int64]*TimerPromise
 	// start
 	WorkflowExecutionStartedEvent *history.WorkflowExecutionStarted
+	WorkflowExecutionContext      *WorkflowExecutionContext
 	Version                       string
 	// final event, can only be execution completed event, and it's internally emit
 	WorkflowExecutionCompleted *history.WorkflowExecutionCompleted
@@ -180,7 +181,8 @@ func (w *WorkflowRuntime) handleWorkflowExecutionStarted(event *history.HistoryE
 		name := e.Name
 		inputBytes := e.Input
 		if workflow, ok := w.WorkflowRegistry.Workflows[name]; ok {
-			ctx := InjectWorkflowExecutionContext(context.Background(), NewWorkflowExecutionContext(w))
+			w.WorkflowExecutionContext = NewWorkflowExecutionContext(w)
+			ctx := InjectWorkflowExecutionContext(context.Background(), w.WorkflowExecutionContext)
 			input := fn.InitArgument(workflow)
 			err := w.DataConverter.Unmarshal(inputBytes, input)
 			if err != nil {
