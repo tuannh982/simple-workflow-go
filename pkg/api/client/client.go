@@ -12,8 +12,9 @@ import (
 )
 
 type WorkflowScheduleOptions struct {
-	WorkflowID string
-	Version    string
+	WorkflowID               string
+	Version                  string
+	ScheduleToStartTimestamp *int64
 }
 
 func ScheduleWorkflow[T any, R any](
@@ -28,11 +29,16 @@ func ScheduleWorkflow[T any, R any](
 	if err != nil {
 		panic(err)
 	}
+	scheduleToStartTimestamp := time.Now().UnixMilli()
+	if options.ScheduleToStartTimestamp != nil {
+		scheduleToStartTimestamp = *options.ScheduleToStartTimestamp
+	}
 	executionStarted := &history.WorkflowExecutionStarted{
-		Name:       name,
-		Version:    options.Version,
-		Input:      inputBytes,
-		WorkflowID: options.WorkflowID,
+		Name:                     name,
+		Version:                  options.Version,
+		Input:                    inputBytes,
+		WorkflowID:               options.WorkflowID,
+		ScheduleToStartTimestamp: scheduleToStartTimestamp,
 	}
 	return backend.CreateWorkflow(ctx, executionStarted)
 }

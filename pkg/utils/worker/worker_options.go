@@ -13,8 +13,8 @@ func newWorkerOptions() *WorkerOptions {
 	return &WorkerOptions{
 		maxConcurrentTasksLimit: 1,
 		pollerInitialInterval:   500 * time.Millisecond,
-		pollerMaxInterval:       5 * time.Minute,
-		pollerBackoffMultiplier: 1.5,
+		pollerMaxInterval:       500 * time.Millisecond,
+		pollerBackoffMultiplier: 1,
 	}
 }
 

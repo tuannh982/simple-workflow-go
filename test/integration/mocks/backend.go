@@ -70,7 +70,7 @@ func (m *mockBackend) CreateWorkflow(_ context.Context, info *history.WorkflowEx
 		payload:    info.Input,
 	}
 	payload, err := dto.Marshal(&history.HistoryEvent{
-		Timestamp:                now,
+		Timestamp:                info.ScheduleToStartTimestamp,
 		WorkflowExecutionStarted: info,
 	})
 	if err != nil {
@@ -128,6 +128,17 @@ func (m *mockBackend) AppendWorkflowEvent(_ context.Context, workflowID string, 
 	}
 	m.persistent.InsertEvent(e)
 	return nil
+}
+
+func (m *mockBackend) GetWorkflowHistory(ctx context.Context, workflowID string) ([]*history.HistoryEvent, error) {
+	workflowHistoryEvents := m.persistent.GetWorkflowHistory(workflowID)
+	sort.Slice(workflowHistoryEvents, func(i, j int) bool {
+		return workflowHistoryEvents[i].sequenceNo < workflowHistoryEvents[j].sequenceNo
+	})
+	oldEvents := collections.MapArray(workflowHistoryEvents, func(a *MockDbHistoryEvent) *history.HistoryEvent {
+		return m.ForceUnmarshalHistoryEvent(a.payload)
+	})
+	return oldEvents, nil
 }
 
 func (m *mockBackend) GetWorkflowTask(_ context.Context) (*task.WorkflowTask, error) {

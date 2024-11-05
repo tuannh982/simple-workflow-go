@@ -1,4 +1,4 @@
-package main
+package sum2rn
 
 import (
 	"context"

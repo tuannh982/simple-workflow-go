@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/tuannh982/simple-workflows-go/examples/subscription_with_debug"
 	"github.com/tuannh982/simple-workflows-go/pkg/api/worker"
 	"go.uber.org/zap"
 	"os"
@@ -15,20 +16,25 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	be, err := InitBackend(logger)
+	be, err := subscription_with_debug.InitBackend(logger)
 	if err != nil {
 		panic(err)
 	}
-	aw, err := worker.NewActivityWorkersBuilder().WithBackend(be).WithLogger(logger).RegisterActivities(
-		GenerateRandomNumberActivity1,
-		GenerateRandomNumberActivity2,
-	).Build()
+	aw, err := worker.NewActivityWorkersBuilder().
+		WithBackend(be).
+		WithLogger(logger).
+		RegisterActivities(
+			subscription_with_debug.PaymentActivity,
+		).Build()
 	if err != nil {
 		panic(err)
 	}
-	ww, err := worker.NewWorkflowWorkersBuilder().WithBackend(be).WithLogger(logger).RegisterWorkflows(
-		Sum2RandomNumberWorkflow,
-	).Build()
+	ww, err := worker.NewWorkflowWorkersBuilder().
+		WithBackend(be).
+		WithLogger(logger).
+		RegisterWorkflows(
+			subscription_with_debug.SubscriptionWorkflow,
+		).Build()
 	if err != nil {
 		panic(err)
 	}

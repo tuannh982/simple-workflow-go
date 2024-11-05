@@ -114,7 +114,7 @@ func (b *be) CreateWorkflow(ctx context.Context, info *history.WorkflowExecution
 			Payload:    info.Input,
 		}
 		he := &history.HistoryEvent{
-			Timestamp:                currentTimestampUTC,
+			Timestamp:                info.ScheduleToStartTimestamp,
 			WorkflowExecutionStarted: info,
 		}
 		historyEventBytes, err := b.dataConverter.Marshal(he)
@@ -191,6 +191,23 @@ func (b *be) AppendWorkflowEvent(ctx context.Context, workflowID string, event *
 		return nil
 	})
 	return HandleSQLError(err)
+}
+
+func (b *be) GetWorkflowHistory(ctx context.Context, workflowID string) ([]*history.HistoryEvent, error) {
+	pHistoryEvents, err := b.historyEventRepo.GetWorkflowHistory(ctx, workflowID)
+	if err != nil {
+		return nil, err
+	}
+	historyEvents := make([]*history.HistoryEvent, len(pHistoryEvents))
+	for i, event := range pHistoryEvents {
+		he := &history.HistoryEvent{}
+		err = b.dataConverter.Unmarshal(event.Payload, he)
+		if err != nil {
+			return nil, err
+		}
+		historyEvents[i] = he
+	}
+	return historyEvents, nil
 }
 
 func (b *be) GetWorkflowTask(ctx context.Context) (result *task.WorkflowTask, err error) {
@@ -388,21 +405,23 @@ func (b *be) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTask
 			})
 		}
 		if result.WorkflowExecutionCompleted != nil {
-			he := &history.HistoryEvent{
-				Timestamp:                  currentTimestampUTC,
-				WorkflowExecutionCompleted: result.WorkflowExecutionCompleted,
+			if !isCompleted { // WorkflowExecutionCompleted is not in processed event list
+				he := &history.HistoryEvent{
+					Timestamp:                  currentTimestampUTC,
+					WorkflowExecutionCompleted: result.WorkflowExecutionCompleted,
+				}
+				bytes, err := b.dataConverter.Marshal(he)
+				if err != nil {
+					return err
+				}
+				pendingEvents = append(pendingEvents, &persistent.Event{
+					WorkflowID: result.Task.WorkflowID,
+					EventID:    b.newUuidString(),
+					CreatedAt:  currentTimestampUTC,
+					VisibleAt:  currentTimestampUTC,
+					Payload:    bytes,
+				})
 			}
-			bytes, err := b.dataConverter.Marshal(he)
-			if err != nil {
-				return err
-			}
-			pendingEvents = append(pendingEvents, &persistent.Event{
-				WorkflowID: result.Task.WorkflowID,
-				EventID:    b.newUuidString(),
-				CreatedAt:  currentTimestampUTC,
-				VisibleAt:  currentTimestampUTC,
-				Payload:    bytes,
-			})
 		}
 		if err = b.taskRepo.InsertTasks(uowCtx, pendingTasks); err != nil {
 			return err
