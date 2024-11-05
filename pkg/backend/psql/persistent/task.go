@@ -19,6 +19,7 @@ type Task struct {
 	WorkflowID    string  `gorm:"column:workflow_id;type:varchar(255);primaryKey"`
 	TaskID        string  `gorm:"column:task_id;type:uuid;primaryKey"`
 	TaskType      string  `gorm:"column:task_type;type:varchar(255);index:idx_task_type_locked_by_visible_at"`
+	NumAttempted  int32   `gorm:"column:num_attempted;type:integer"`
 	LockedBy      *string `gorm:"column:locked_by;type:varchar(255);index:idx_task_type_locked_by_visible_at"`
 	LockedAt      int64   `gorm:"column:locked_at;type:bigint"` // TODO implement unlock worker later
 	CreatedAt     int64   `gorm:"column:created_at;type:bigint"`
@@ -32,7 +33,7 @@ type TaskRepository interface {
 	InsertTask(ctx context.Context, task *Task) error
 	GetTask(ctx context.Context, workflowID string, taskID string) (*Task, error)
 	InsertTasks(ctx context.Context, tasks []*Task) error
-	ReleaseTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string, reason *string) error
+	ReleaseTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string, reason *string, nextScheduleTimestamp *int64) error
 	DeleteTask(ctx context.Context, workflowID string, taskID string) error
 	TouchTask(ctx context.Context, workflowID string, taskID string) error
 	GetAndLockAvailableTask(ctx context.Context, taskType task.TaskType, lockedBy string) (*Task, error)
@@ -68,11 +69,16 @@ func (r *taskRepository) InsertTasks(ctx context.Context, task []*Task) error {
 	return result.Error
 }
 
-func (r *taskRepository) ReleaseTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string, reason *string) error {
+func (r *taskRepository) ReleaseTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string, reason *string, nextScheduleTimestamp *int64) error {
 	uow := r.UnitOfWork(ctx)
-	result := uow.Tx.Model(&Task{}).Where("workflow_id = ? AND task_id = ? AND task_type = ? AND locked_by = ?", workflowID, taskID, string(taskType), lockedBy).Updates(map[string]interface{}{
+	updates := map[string]interface{}{
+		"num_attempted":  gorm.Expr("num_attempted + 1"),
 		"release_reason": reason,
-	})
+	}
+	if nextScheduleTimestamp != nil {
+		updates["visible_at"] = *nextScheduleTimestamp
+	}
+	result := uow.Tx.Model(&Task{}).Where("workflow_id = ? AND task_id = ? AND task_type = ? AND locked_by = ?", workflowID, taskID, string(taskType), lockedBy).Updates(updates)
 	if result.Error != nil {
 		return result.Error
 	}

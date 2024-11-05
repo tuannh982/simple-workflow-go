@@ -15,7 +15,7 @@ import (
 type WorkerThread[T Summarizer, R Summarizer] struct {
 	name          string
 	taskProcessor TaskProcessor[T, R]
-	bo            backoff.BackOff
+	bo            backoff.Backoff
 	wg            *sync.WaitGroup
 	logger        *zap.Logger
 }
@@ -23,7 +23,7 @@ type WorkerThread[T Summarizer, R Summarizer] struct {
 func NewWorkerThread[T Summarizer, R Summarizer](
 	name string,
 	taskProcessor TaskProcessor[T, R],
-	bo backoff.BackOff,
+	bo backoff.Backoff,
 	wg *sync.WaitGroup,
 	logger *zap.Logger,
 ) *WorkerThread[T, R] {
@@ -53,7 +53,7 @@ loop:
 				if !(errors.Is(err, ErrNoTask) || errors.Is(err, SuppressedError)) {
 					w.logger.Error("Error while polling task", zap.Error(err))
 				}
-				w.bo.BackOff()
+				w.bo.Backoff()
 			} else {
 				w.logger.Debug("Task fetched", zap.Any("task", task.Summary()))
 				if err = w.processTask(ctx, task); err != nil {
@@ -63,7 +63,7 @@ loop:
 				}
 				w.bo.Reset()
 			}
-			if done := w.waitFor(ctx, w.bo.GetBackOffDuration()); done {
+			if done := w.waitFor(ctx, w.bo.GetBackoffDuration()); done {
 				break loop
 			}
 		}

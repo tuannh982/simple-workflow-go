@@ -6,6 +6,7 @@ import (
 	"github.com/tuannh982/simple-workflows-go/pkg/dto"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
 	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
+	"time"
 )
 
 type Backend interface {
@@ -19,5 +20,5 @@ type Backend interface {
 	AbandonWorkflowTask(ctx context.Context, task *task.WorkflowTask, reason *string) error
 	GetActivityTask(ctx context.Context) (*task.ActivityTask, error)
 	CompleteActivityTask(ctx context.Context, result *task.ActivityTaskResult) error
-	AbandonActivityTask(ctx context.Context, task *task.ActivityTask, reason *string) error
+	AbandonActivityTask(ctx context.Context, task *task.ActivityTask, reason *string, backoffDuration time.Duration) error
 }

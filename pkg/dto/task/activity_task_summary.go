@@ -8,6 +8,7 @@ type ActivityTaskSummary struct {
 	TaskID          string
 	WorkflowID      string
 	TaskScheduledID int64
+	NumAttempted    int
 }
 
 func (t *ActivityTask) Summary() any {
@@ -15,6 +16,7 @@ func (t *ActivityTask) Summary() any {
 		TaskID:          t.TaskID,
 		WorkflowID:      t.WorkflowID,
 		TaskScheduledID: t.TaskScheduleEvent.TaskScheduledID,
+		NumAttempted:    t.NumAttempted,
 	}
 }
 

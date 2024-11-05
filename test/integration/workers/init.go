@@ -8,7 +8,8 @@ import (
 	"github.com/tuannh982/simple-workflows-go/pkg/backend"
 	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
 	"github.com/tuannh982/simple-workflows-go/pkg/registry"
-	"github.com/tuannh982/simple-workflows-go/pkg/worker"
+	"github.com/tuannh982/simple-workflows-go/pkg/worker/activity_worker"
+	"github.com/tuannh982/simple-workflows-go/pkg/worker/workflow_worker"
 	"github.com/tuannh982/simple-workflows-go/test/integration/mocks"
 	"go.uber.org/zap"
 	"testing"
@@ -55,7 +56,7 @@ func mockWorkflow1(ctx context.Context, input *mockStruct) (r *mockStruct, err e
 
 var dataConverter = dataconverter.NewJsonDataConverter()
 
-func initWorkers(t *testing.T, logger *zap.Logger) (backend.Backend, *worker.ActivityWorker, *worker.WorkflowWorker) {
+func initWorkers(t *testing.T, logger *zap.Logger) (backend.Backend, *activity_worker.ActivityWorker, *workflow_worker.WorkflowWorker) {
 	var err error
 	be := mocks.NewMockBackend(dataConverter)
 	ar := registry.NewActivityRegistry()
@@ -69,7 +70,7 @@ func initWorkers(t *testing.T, logger *zap.Logger) (backend.Backend, *worker.Act
 	wr := registry.NewWorkflowRegistry()
 	err = wr.RegisterWorkflows(mockWorkflow1)
 	assert.Nil(t, err)
-	activityWorker := worker.NewActivityWorker("1", be, ar, dataConverter, logger)
-	workflowWorker := worker.NewWorkflowWorker("1", be, wr, dataConverter, logger)
+	activityWorker := activity_worker.NewActivityWorker("1", be, ar, dataConverter, logger)
+	workflowWorker := workflow_worker.NewWorkflowWorker("1", be, wr, dataConverter, logger)
 	return be, activityWorker, workflowWorker
 }

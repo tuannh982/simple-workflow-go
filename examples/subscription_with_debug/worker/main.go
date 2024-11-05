@@ -5,9 +5,11 @@ import (
 	"github.com/tuannh982/simple-workflows-go/examples"
 	"github.com/tuannh982/simple-workflows-go/examples/subscription_with_debug"
 	"github.com/tuannh982/simple-workflows-go/pkg/api/worker"
+	"github.com/tuannh982/simple-workflows-go/pkg/worker/activity_worker"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -26,7 +28,11 @@ func main() {
 		WithLogger(logger).
 		RegisterActivities(
 			subscription_with_debug.PaymentActivity,
-		).Build()
+		).
+		WithActivityWorkerOpts(
+			activity_worker.WithTaskProcessorMaxBackoffInterval(1 * time.Minute),
+		).
+		Build()
 	if err != nil {
 		panic(err)
 	}

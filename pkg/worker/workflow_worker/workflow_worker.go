@@ -1,4 +1,4 @@
-package worker
+package workflow_worker
 
 import (
 	"context"
@@ -25,13 +25,17 @@ func NewWorkflowWorker(
 	registry *registry.WorkflowRegistry,
 	dataConverter dataconverter.DataConverter,
 	logger *zap.Logger,
-	opts ...func(options *worker.WorkerOptions),
+	opts ...func(options *WorkflowWorkerOptions),
 ) *WorkflowWorker {
+	options := NewWorkflowWorkerOptions()
+	for _, configure := range opts {
+		configure(options)
+	}
 	fqn := fmt.Sprintf("Activity worker %s", name)
 	childLogger := logger.With(zap.String("worker", name))
 	executor := workflow.NewWorkflowTaskExecutor(registry, dataConverter, childLogger)
 	processor := workflow.NewWorkflowTaskProcessor(be, executor, childLogger)
-	w := worker.NewWorker(fqn, processor, childLogger, opts...)
+	w := worker.NewWorker(fqn, processor, childLogger, options.WorkerOptions)
 	return &WorkflowWorker{
 		processor: processor,
 		w:         w,

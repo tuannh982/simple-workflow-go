@@ -449,7 +449,7 @@ func (b *be) AbandonWorkflowTask(ctx context.Context, t *task.WorkflowTask, reas
 		if err != nil {
 			return err
 		}
-		return b.taskRepo.ReleaseTask(uowCtx, t.WorkflowID, t.TaskID, task.TaskTypeWorkflow, b.lockedBy, reason)
+		return b.taskRepo.ReleaseTask(uowCtx, t.WorkflowID, t.TaskID, task.TaskTypeWorkflow, b.lockedBy, reason, nil)
 	})
 	return HandleSQLError(err)
 }
@@ -536,13 +536,15 @@ func (b *be) CompleteActivityTask(ctx context.Context, result *task.ActivityTask
 	return HandleSQLError(err)
 }
 
-func (b *be) AbandonActivityTask(ctx context.Context, t *task.ActivityTask, reason *string) error {
+func (b *be) AbandonActivityTask(ctx context.Context, t *task.ActivityTask, reason *string, backoffDuration time.Duration) error {
 	err := b.db.Transaction(func(tx *gorm.DB) error {
 		uowCtx, err := b.createUow(ctx, tx)
 		if err != nil {
 			return err
 		}
-		return b.taskRepo.ReleaseTask(uowCtx, t.WorkflowID, t.TaskID, task.TaskTypeActivity, b.lockedBy, reason)
+		currentTimestampUTC := b.getCurrentTimestampLocal()
+		nextScheduleTimestamp := currentTimestampUTC + backoffDuration.Milliseconds()
+		return b.taskRepo.ReleaseTask(uowCtx, t.WorkflowID, t.TaskID, task.TaskTypeActivity, b.lockedBy, reason, &nextScheduleTimestamp)
 	})
 	return HandleSQLError(err)
 }

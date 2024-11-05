@@ -6,8 +6,7 @@ import (
 	"github.com/tuannh982/simple-workflows-go/pkg/backend"
 	"github.com/tuannh982/simple-workflows-go/pkg/registry"
 	"github.com/tuannh982/simple-workflows-go/pkg/utils/commons"
-	worker2 "github.com/tuannh982/simple-workflows-go/pkg/utils/worker"
-	"github.com/tuannh982/simple-workflows-go/pkg/worker"
+	"github.com/tuannh982/simple-workflows-go/pkg/worker/workflow_worker"
 	"go.uber.org/zap"
 	"os"
 )
@@ -16,13 +15,13 @@ type WorkflowWorkersBuilder struct {
 	logger             *zap.Logger
 	name               string
 	backend            backend.Backend
-	workflowWorkerOpts []func(options *worker2.WorkerOptions)
+	workflowWorkerOpts []func(options *workflow_worker.WorkflowWorkerOptions)
 	workflows          []any
 }
 
 func NewWorkflowWorkersBuilder() *WorkflowWorkersBuilder {
 	return &WorkflowWorkersBuilder{
-		workflowWorkerOpts: make([]func(options *worker2.WorkerOptions), 0),
+		workflowWorkerOpts: make([]func(options *workflow_worker.WorkflowWorkerOptions), 0),
 		workflows:          make([]any, 0),
 	}
 }
@@ -42,7 +41,7 @@ func (b *WorkflowWorkersBuilder) WithBackend(backend backend.Backend) *WorkflowW
 	return b
 }
 
-func (b *WorkflowWorkersBuilder) WithWorkflowWorkerOpts(opts ...func(options *worker2.WorkerOptions)) *WorkflowWorkersBuilder {
+func (b *WorkflowWorkersBuilder) WithWorkflowWorkerOpts(opts ...func(options *workflow_worker.WorkflowWorkerOptions)) *WorkflowWorkersBuilder {
 	b.workflowWorkerOpts = append(b.workflowWorkerOpts, opts...)
 	return b
 }
@@ -52,7 +51,7 @@ func (b *WorkflowWorkersBuilder) RegisterWorkflows(workflows ...any) *WorkflowWo
 	return b
 }
 
-func (b *WorkflowWorkersBuilder) Build() (*worker.WorkflowWorker, error) {
+func (b *WorkflowWorkersBuilder) Build() (*workflow_worker.WorkflowWorker, error) {
 	wr := registry.NewWorkflowRegistry()
 	err := wr.RegisterWorkflows(b.workflows...)
 	if err != nil {
@@ -64,6 +63,6 @@ func (b *WorkflowWorkersBuilder) Build() (*worker.WorkflowWorker, error) {
 		id := uuid.New()
 		name = fmt.Sprintf("[%s] WorkflowWorker %s", host, id.String())
 	}
-	ww := worker.NewWorkflowWorker(name, b.backend, wr, b.backend.DataConverter(), b.logger, b.workflowWorkerOpts...)
+	ww := workflow_worker.NewWorkflowWorker(name, b.backend, wr, b.backend.DataConverter(), b.logger, b.workflowWorkerOpts...)
 	return ww, nil
 }

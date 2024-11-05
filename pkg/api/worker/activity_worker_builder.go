@@ -6,8 +6,7 @@ import (
 	"github.com/tuannh982/simple-workflows-go/pkg/backend"
 	"github.com/tuannh982/simple-workflows-go/pkg/registry"
 	"github.com/tuannh982/simple-workflows-go/pkg/utils/commons"
-	worker2 "github.com/tuannh982/simple-workflows-go/pkg/utils/worker"
-	"github.com/tuannh982/simple-workflows-go/pkg/worker"
+	"github.com/tuannh982/simple-workflows-go/pkg/worker/activity_worker"
 	"go.uber.org/zap"
 	"os"
 )
@@ -16,13 +15,13 @@ type ActivityWorkersBuilder struct {
 	logger             *zap.Logger
 	name               string
 	backend            backend.Backend
-	activityWorkerOpts []func(options *worker2.WorkerOptions)
+	activityWorkerOpts []func(options *activity_worker.ActivityWorkerOptions)
 	activities         []any
 }
 
 func NewActivityWorkersBuilder() *ActivityWorkersBuilder {
 	return &ActivityWorkersBuilder{
-		activityWorkerOpts: make([]func(options *worker2.WorkerOptions), 0),
+		activityWorkerOpts: make([]func(options *activity_worker.ActivityWorkerOptions), 0),
 		activities:         make([]any, 0),
 	}
 }
@@ -42,7 +41,7 @@ func (b *ActivityWorkersBuilder) WithBackend(backend backend.Backend) *ActivityW
 	return b
 }
 
-func (b *ActivityWorkersBuilder) WithActivityWorkerOpts(opts ...func(options *worker2.WorkerOptions)) *ActivityWorkersBuilder {
+func (b *ActivityWorkersBuilder) WithActivityWorkerOpts(opts ...func(options *activity_worker.ActivityWorkerOptions)) *ActivityWorkersBuilder {
 	b.activityWorkerOpts = append(b.activityWorkerOpts, opts...)
 	return b
 }
@@ -52,7 +51,7 @@ func (b *ActivityWorkersBuilder) RegisterActivities(activities ...any) *Activity
 	return b
 }
 
-func (b *ActivityWorkersBuilder) Build() (*worker.ActivityWorker, error) {
+func (b *ActivityWorkersBuilder) Build() (*activity_worker.ActivityWorker, error) {
 	ar := registry.NewActivityRegistry()
 	err := ar.RegisterActivities(b.activities...)
 	if err != nil {
@@ -64,6 +63,6 @@ func (b *ActivityWorkersBuilder) Build() (*worker.ActivityWorker, error) {
 		id := uuid.New()
 		name = fmt.Sprintf("[%s] ActivityWorker %s", host, id.String())
 	}
-	aw := worker.NewActivityWorker(name, b.backend, ar, b.backend.DataConverter(), b.logger, b.activityWorkerOpts...)
+	aw := activity_worker.NewActivityWorker(name, b.backend, ar, b.backend.DataConverter(), b.logger, b.activityWorkerOpts...)
 	return aw, nil
 }

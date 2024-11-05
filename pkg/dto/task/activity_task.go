@@ -8,6 +8,7 @@ import (
 type ActivityTask struct {
 	TaskID            string
 	WorkflowID        string
+	NumAttempted      int
 	TaskScheduleEvent *history.ActivityScheduled
 }
 

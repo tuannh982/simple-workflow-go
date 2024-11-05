@@ -11,7 +11,16 @@ import (
 )
 
 type mockTask struct{}
+
+func (t *mockTask) Summary() any {
+	return t
+}
+
 type mockTaskResult struct{}
+
+func (t *mockTaskResult) Summary() any {
+	return t
+}
 
 type mockTaskProcessor struct {
 	numTasks int
@@ -58,7 +67,7 @@ func TestWorkerDraining(t *testing.T) {
 			return nil
 		},
 	}
-	w := NewWorker("worker", taskProcessor, zap.NewNop(), WithMaxConcurrentTasksLimit(3))
+	w := NewWorkerOpts("worker", taskProcessor, zap.NewNop(), WithMaxConcurrentTasksLimit(3))
 	ctx := context.Background()
 	w.Start(ctx)
 	time.Sleep(10 * time.Second)
@@ -75,11 +84,11 @@ func TestProcessError(t *testing.T) {
 			return nil
 		},
 		abandon: func(ctx context.Context, task *mockTask, reason *string) error {
-			fmt.Printf("%v\n", reason)
+			fmt.Printf("%v\n", *reason)
 			return nil
 		},
 	}
-	w := NewWorker("worker", taskProcessor, zap.NewNop(), WithMaxConcurrentTasksLimit(1))
+	w := NewWorkerOpts("worker", taskProcessor, zap.NewNop(), WithMaxConcurrentTasksLimit(1))
 	ctx := context.Background()
 	w.Start(ctx)
 	time.Sleep(5 * time.Second)
@@ -99,7 +108,7 @@ func TestPanicProcessor(t *testing.T) {
 			panic("panicked")
 		},
 	}
-	w := NewWorker("worker", taskProcessor, zap.NewNop(), WithMaxConcurrentTasksLimit(1))
+	w := NewWorkerOpts("worker", taskProcessor, zap.NewNop(), WithMaxConcurrentTasksLimit(1))
 	ctx := context.Background()
 	w.Start(ctx)
 	time.Sleep(3 * time.Second)
@@ -108,7 +117,7 @@ func TestPanicProcessor(t *testing.T) {
 	taskProcessor.process = func(ctx context.Context, task *mockTask) (*mockTaskResult, error) {
 		return nil, errors.New("always error")
 	}
-	w = NewWorker("worker", taskProcessor, zap.NewNop(), WithMaxConcurrentTasksLimit(1))
+	w = NewWorkerOpts("worker", taskProcessor, zap.NewNop(), WithMaxConcurrentTasksLimit(1))
 	ctx = context.Background()
 	w.Start(ctx)
 	time.Sleep(3 * time.Second)

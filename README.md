@@ -27,7 +27,7 @@ const (
     DbPassword = "123456"
 )
 
-func InitBackend(logger *zap.Logger) (backend.Backend, error) {
+func InitPSQLBackend(logger *zap.Logger) (backend.Backend, error) {
     hostname, err := os.Hostname()
     if err != nil {
         return nil, err
@@ -47,7 +47,7 @@ func InitBackend(logger *zap.Logger) (backend.Backend, error) {
 ```
 
 ```go
-be, err := psql.InitBackend(logger)
+be, err := examples.InitPSQLBackend(logger)
 ```
 
 ### Activities
@@ -81,8 +81,9 @@ Workflow is the orchestration of activities
 
 ```go
 type SubscriptionWorkflowInput struct {
-    TotalAmount int64
-    Cycles      int
+    TotalAmount   int64
+    Cycles        int
+    CycleDuration time.Duration
 }
 
 type SubscriptionWorkflowOutput struct {
@@ -93,7 +94,7 @@ type SubscriptionWorkflowOutput struct {
 func SubscriptionWorkflow(ctx context.Context, input *SubscriptionWorkflowInput) (*SubscriptionWorkflowOutput, error) {
     startTimestamp := workflow.GetWorkflowExecutionStartedTimestamp(ctx)
     paymentAmounts := calculatePaymentCycles(input.TotalAmount, input.Cycles)
-    paymentTimings := calculatePaymentTimings(startTimestamp, input.Cycles)
+    paymentTimings := calculatePaymentTimings(startTimestamp, input.Cycles, input.CycleDuration)
     //
     var paid int64 = 0
     var overdue int64 = 0
@@ -139,20 +140,28 @@ Workers, including `ActivityWorker` and `WorkflowWorker` are responsible for exe
 #### ActivityWorker
 ```go
 aw, err := worker.NewActivityWorkersBuilder().
-	WithBackend(be).
-	WithLogger(logger).
-	RegisterActivities(PaymentActivity).
-	Build()
+    WithName("demo activity worker").
+    WithBackend(be).
+    WithLogger(logger).
+    RegisterActivities(
+        PaymentActivity,
+    ).
+    WithActivityWorkerOpts(
+        activity_worker.WithTaskProcessorMaxBackoffInterval(1 * time.Minute),
+    ).
+    Build()
 ```
 
 #### WorkflowWorker
 
 ```go
 ww, err := worker.NewWorkflowWorkersBuilder().
-	WithBackend(be).
-	WithLogger(logger).
-	RegisterWorkflows(SubscriptionWorkflow).
-	Build()
+    WithName("demo workflow worker").
+    WithBackend(be).
+    WithLogger(logger).
+    RegisterWorkflows(
+        SubscriptionWorkflow,
+    ).Build()
 ```
 
 ### Putting all together
@@ -162,27 +171,35 @@ Putting all pieces together, we can implement our worker program
 ```go
 func main() {
     ctx := context.Background()
-    logger, err := zap.NewProduction()
+    logger, err := examples.GetLogger()
     if err != nil {
         panic(err)
     }
-    be, err := InitBackend(logger)
+    be, err := examples.InitPSQLBackend(logger)
     if err != nil {
         panic(err)
     }
     aw, err := worker.NewActivityWorkersBuilder().
-		WithBackend(be).
-		WithLogger(logger).
-		RegisterActivities(PaymentActivity).
-		Build()
+        WithName("demo activity worker").
+        WithBackend(be).
+        WithLogger(logger).
+        RegisterActivities(
+            PaymentActivity,
+        ).
+        WithActivityWorkerOpts(
+            activity_worker.WithTaskProcessorMaxBackoffInterval(1 * time.Minute),
+        ).
+        Build()
     if err != nil {
-        panic(err)
+    panic(err)
     }
     ww, err := worker.NewWorkflowWorkersBuilder().
-		WithBackend(be).
-		WithLogger(logger).
-		RegisterWorkflows(SubscriptionWorkflow).
-		Build()
+        WithName("demo workflow worker").
+        WithBackend(be).
+        WithLogger(logger).
+        RegisterWorkflows(
+            SubscriptionWorkflow,
+        ).Build()
     if err != nil {
         panic(err)
     }
