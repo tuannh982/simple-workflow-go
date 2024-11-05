@@ -40,10 +40,6 @@ func InitBackend(logger *zap.Logger) (backend.Backend, error) {
     if err != nil {
         return nil, err
     }
-    err = psql.TruncateDB(db) // truncate DB data
-    if err != nil {
-        return nil, err
-    }
     dataConverter := dataconverter.NewJsonDataConverter()
     be := psql.NewPSQLBackend(hostname, dataConverter, db, logger)
     return be, nil
@@ -59,21 +55,17 @@ Activity is a function that used to implement service calls, I/O operation,
 long running operations, or costly actions which are not prefer to be re-executed
 
 ```go
-func GenerateNumber(seed int64, round int) int64 {
-    for _ = range round {
-        seed ^= seed << 13
-        seed ^= seed << 17
-        seed ^= seed << 5
+type PaymentInput struct {
+    Value int64
+}
+
+func PaymentActivity(ctx context.Context, input *PaymentInput) (*Void, error) {
+    r := rand.Intn(100)
+    if r < 30 { // 30% of failure
+        return &Void{}, nil
+    } else {
+        return nil, errors.New("payment failed")
     }
-    return seed
-}
-
-func GenerateRandomNumberActivity1(ctx context.Context, input *Seed) (*Int64, error) {
-    return &Int64{Value: GenerateNumber(input.Value, 19)}, nil
-}
-
-func GenerateRandomNumberActivity2(ctx context.Context, input *Seed) (*Int64, error) {
-    return &Int64{Value: GenerateNumber(input.Value, 23)}, nil
 }
 ```
 
@@ -88,17 +80,52 @@ just call `panic(...)`, the activity will be retried later
 Workflow is the orchestration of activities
 
 ```go
-func Sum2RandomNumberWorkflow(ctx context.Context, input *Seed) (*Int64, error) {
-    activity1Result, err := workflow.CallActivity(ctx, GenerateRandomNumberActivity1, input).Await()
-    if err != nil {
-        return nil, err
+type SubscriptionWorkflowInput struct {
+    TotalAmount int64
+    Cycles      int
+}
+
+type SubscriptionWorkflowOutput struct {
+    Paid    int64
+    Overdue int64
+}
+
+func SubscriptionWorkflow(ctx context.Context, input *SubscriptionWorkflowInput) (*SubscriptionWorkflowOutput, error) {
+    startTimestamp := workflow.GetWorkflowExecutionStartedTimestamp(ctx)
+    paymentAmounts := calculatePaymentCycles(input.TotalAmount, input.Cycles)
+    paymentTimings := calculatePaymentTimings(startTimestamp, input.Cycles)
+    //
+    var paid int64 = 0
+    var overdue int64 = 0
+    currentCycle := 0
+    for {
+        workflow.SetVar(ctx, "paid", paid)
+        workflow.SetVar(ctx, "overdue", overdue)
+        workflow.SetVar(ctx, "currentCycle", currentCycle)
+        if currentCycle >= input.Cycles {
+            break
+        }
+        currentCycleAmount := paymentAmounts[currentCycle]
+        amountToPay := currentCycleAmount + overdue
+        workflow.SetVar(ctx, "amountToPay", amountToPay)
+        workflow.WaitUntil(ctx, time.UnixMilli(paymentTimings[currentCycle]))
+        _, err := workflow.CallActivity(ctx, PaymentActivity, &PaymentInput{Value: amountToPay}).Await()
+        if err != nil {
+            overdue += paymentAmounts[currentCycle]
+            workflow.SetVar(ctx, fmt.Sprintf("cycle_%d_err", currentCycle), err.Error())
+        } else {
+            paid += amountToPay
+            overdue = 0
+            workflow.SetVar(ctx, fmt.Sprintf("cycle_%d_paid_amount", currentCycle), amountToPay)
+        }
+        workflow.SetVar(ctx, "amountToPay", 0)
+        workflow.SetVar(ctx, fmt.Sprintf("cycle_%d_completed_at", currentCycle), workflow.GetCurrentTimestamp(ctx))
+        currentCycle += 1
     }
-    activity2Result, err := workflow.CallActivity(ctx, GenerateRandomNumberActivity2, input).Await()
-    if err != nil {
-        return nil, err
-    }
-    sum := activity1Result.Value + activity2Result.Value
-    return &Int64{Value: sum}, nil
+    return &SubscriptionWorkflowOutput{
+        Paid:    paid,
+        Overdue: overdue,
+    }, nil
 }
 ```
 
@@ -111,28 +138,21 @@ Workers, including `ActivityWorker` and `WorkflowWorker` are responsible for exe
 
 #### ActivityWorker
 ```go
-aw, err := worker2.NewActivityWorkersBuilder().
-    WithName("[e2e test] ActivityWorker").
-    WithBackend(be).
-    WithLogger(logger).
-    RegisterActivities(
-        GenerateRandomNumberActivity1,
-        GenerateRandomNumberActivity2,
-    ).
-    Build()
+aw, err := worker.NewActivityWorkersBuilder().
+	WithBackend(be).
+	WithLogger(logger).
+	RegisterActivities(PaymentActivity).
+	Build()
 ```
 
 #### WorkflowWorker
 
 ```go
-ww, err := worker2.NewWorkflowWorkersBuilder().
-    WithName("[e2e test] WorkflowWorker").
-    WithBackend(be).
-    WithLogger(logger).
-    RegisterWorkflows(
-        Sum2RandomNumberWorkflow,
-    ).
-    Build()
+ww, err := worker.NewWorkflowWorkersBuilder().
+	WithBackend(be).
+	WithLogger(logger).
+	RegisterWorkflows(SubscriptionWorkflow).
+	Build()
 ```
 
 ### Putting all together
@@ -146,20 +166,23 @@ func main() {
     if err != nil {
         panic(err)
     }
-    be, err := psql.InitBackend(logger)
+    be, err := InitBackend(logger)
     if err != nil {
         panic(err)
     }
-    aw, err := worker2.NewActivityWorkersBuilder().WithBackend(be).WithLogger(logger).RegisterActivities(
-        GenerateRandomNumberActivity1,
-        GenerateRandomNumberActivity2,
-    ).Build()
+    aw, err := worker.NewActivityWorkersBuilder().
+		WithBackend(be).
+		WithLogger(logger).
+		RegisterActivities(PaymentActivity).
+		Build()
     if err != nil {
         panic(err)
     }
-    ww, err := worker2.NewWorkflowWorkersBuilder().WithBackend(be).WithLogger(logger).RegisterWorkflows(
-        Sum2RandomNumberWorkflow,
-    ).Build()
+    ww, err := worker.NewWorkflowWorkersBuilder().
+		WithBackend(be).
+		WithLogger(logger).
+		RegisterWorkflows(SubscriptionWorkflow).
+		Build()
     if err != nil {
         panic(err)
     }
@@ -180,9 +203,12 @@ After having our worker instance running, we can write codes to start workflows 
 
 #### Start workflow
 
+To schedule a workflow, call `ScheduleWorkflow`, and then fill out the necessary parameters to start the workflow
+
 ```go
-err := client.ScheduleWorkflow(ctx, be, Sum2RandomNumberWorkflow, &Seed{
-    Value: seed,
+err := client.ScheduleWorkflow(ctx, be, SubscriptionWorkflow, &SubscriptionWorkflowInput{
+    TotalAmount: totalAmount,
+    Cycles:      cycles,
 }, client.WorkflowScheduleOptions{
     WorkflowID: workflowID,
     Version:    "1",
@@ -191,15 +217,34 @@ err := client.ScheduleWorkflow(ctx, be, Sum2RandomNumberWorkflow, &Seed{
 
 #### Await workflow result
 
+To wait for a workflow execution to complete and get its result, call `AwaitWorkflowResult` method
+
 ```go
-workflowResult, workflowErr, err := client.AwaitWorkflowResult(
-    ctx, 
-    be, 
-    Sum2RandomNumberWorkflow, 
-    workflowID, 
-)
+workflowResult, workflowErr, err := client.AwaitWorkflowResult(ctx, be, SubscriptionWorkflow, workflowID)
 ```
+
+#### Debugging running workflow
+
+First, to debug a running workflow, we have to put several runtime variables inside the workflow.
+
+We will use method `SetVar[T any](ctx context.Context, name string, value T)` which is used to modify a runtime variable.
+After that, we will use the WorkflowDebugger to debug the current runtime state by getting those variables out.
+
+```go
+dbg := debug.NewWorkflowDebugger(be)
+vars, err := dbg.QueryUserDefinedVars(SubscriptionWorkflow, workflowID)
+if err != nil {
+    panic(err)
+}
+PrettyPrint(vars)
+```
+
+all above code were taken from [subscription_with_debug](examples/subscription_with_debug) example
 
 ## Build & Test
 
 Run `build.sh` to perform build, unit test, integration test and e2e test
+
+## Examples
+
+See [examples](examples)

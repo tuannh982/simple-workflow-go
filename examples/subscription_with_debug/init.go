@@ -1,4 +1,4 @@
-package sum2rn
+package subscription_with_debug
 
 import (
 	"github.com/tuannh982/simple-workflows-go/pkg/backend"

@@ -16,8 +16,8 @@ type WorkflowExecutionStarted struct {
 	Version                  string
 	Input                    []byte
 	WorkflowID               string
-	ParentWorkflowInfo       *ParentWorkflowInfo
 	ScheduleToStartTimestamp int64
+	ParentWorkflowInfo       *ParentWorkflowInfo
 }
 
 type WorkflowExecutionCompleted struct {

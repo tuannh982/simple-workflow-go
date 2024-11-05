@@ -33,9 +33,10 @@ type WorkflowRuntime struct {
 	TimerCreatedEvents      map[int64]*history.TimerCreated
 	TimerPromises           map[int64]*TimerPromise
 	// start
-	WorkflowExecutionStartedEvent *history.WorkflowExecutionStarted
-	WorkflowExecutionContext      *WorkflowExecutionContext
-	Version                       string
+	WorkflowExecutionStartedTimestamp int64
+	WorkflowExecutionStartedEvent     *history.WorkflowExecutionStarted
+	WorkflowExecutionContext          *WorkflowExecutionContext
+	Version                           string
 	// final event, can only be execution completed event, and it's internally emit
 	WorkflowExecutionCompleted *history.WorkflowExecutionCompleted
 }
@@ -176,6 +177,7 @@ func (w *WorkflowRuntime) handleWorkflowExecutionStarted(event *history.HistoryE
 			// ignore duplicated event
 			return nil
 		}
+		w.WorkflowExecutionStartedTimestamp = event.Timestamp
 		w.WorkflowExecutionStartedEvent = event.WorkflowExecutionStarted
 		w.Version = event.WorkflowExecutionStarted.Version
 		name := e.Name

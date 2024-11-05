@@ -70,7 +70,7 @@ func (m *mockBackend) CreateWorkflow(_ context.Context, info *history.WorkflowEx
 		payload:    info.Input,
 	}
 	payload, err := dto.Marshal(&history.HistoryEvent{
-		Timestamp:                now,
+		Timestamp:                info.ScheduleToStartTimestamp,
 		WorkflowExecutionStarted: info,
 	})
 	if err != nil {
