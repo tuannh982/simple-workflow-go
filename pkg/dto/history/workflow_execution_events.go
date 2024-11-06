@@ -17,7 +17,7 @@ type WorkflowExecutionStarted struct {
 	Input                    []byte
 	WorkflowID               string
 	ScheduleToStartTimestamp int64
-	ParentWorkflowInfo       *ParentWorkflowInfo
+	ParentWorkflowInfo       *ParentWorkflowInfo `json:",omitempty"`
 }
 
 type WorkflowExecutionCompleted struct {

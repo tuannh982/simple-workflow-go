@@ -16,5 +16,5 @@ type WorkflowTaskResult struct {
 	Task                       *WorkflowTask
 	PendingActivities          []*history.ActivityScheduled
 	PendingTimers              []*history.TimerCreated
-	WorkflowExecutionCompleted *history.WorkflowExecutionCompleted
+	WorkflowExecutionCompleted *history.WorkflowExecutionCompleted `json:",omitempty"`
 }

@@ -1,8 +1,8 @@
 package dto
 
 type ExecutionResult struct {
-	Result *[]byte
-	Error  *Error
+	Result *[]byte `json:",omitempty"`
+	Error  *Error  `json:",omitempty"`
 }
 
 func ExtractErrorFromFnCallError(err error) *Error {

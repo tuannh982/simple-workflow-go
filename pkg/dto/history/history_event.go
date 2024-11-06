@@ -4,20 +4,20 @@ type HistoryEvent struct {
 	Timestamp int64 // millisecond precision
 
 	// workflow start and end events
-	WorkflowExecutionStarted    *WorkflowExecutionStarted
-	WorkflowExecutionCompleted  *WorkflowExecutionCompleted
-	WorkflowExecutionTerminated *WorkflowExecutionTerminated
+	WorkflowExecutionStarted    *WorkflowExecutionStarted    `json:",omitempty"`
+	WorkflowExecutionCompleted  *WorkflowExecutionCompleted  `json:",omitempty"`
+	WorkflowExecutionTerminated *WorkflowExecutionTerminated `json:",omitempty"`
 
 	// workflow events when workflow worker picked/finished a workflow task
-	WorkflowTaskStarted *WorkflowTaskStarted
+	WorkflowTaskStarted *WorkflowTaskStarted `json:",omitempty"`
 
 	// activity events
-	ActivityScheduled *ActivityScheduled
-	ActivityCompleted *ActivityCompleted
+	ActivityScheduled *ActivityScheduled `json:",omitempty"`
+	ActivityCompleted *ActivityCompleted `json:",omitempty"`
 
 	// timers
-	TimerCreated *TimerCreated
-	TimerFired   *TimerFired
+	TimerCreated *TimerCreated `json:",omitempty"`
+	TimerFired   *TimerFired   `json:",omitempty"`
 }
 
 func (e *HistoryEvent) GetType() string {

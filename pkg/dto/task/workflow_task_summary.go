@@ -32,7 +32,7 @@ type WorkflowTaskResultSummary struct {
 	TaskFetchTimestamp         time.Time
 	PendingActivities          []*history.ActivityScheduled
 	PendingTimers              []*history.TimerCreated
-	WorkflowExecutionCompleted *history.WorkflowExecutionCompleted
+	WorkflowExecutionCompleted *history.WorkflowExecutionCompleted `json:",omitempty"`
 }
 
 func (r *WorkflowTaskResult) Summary() any {
