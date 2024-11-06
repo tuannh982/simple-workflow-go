@@ -3,6 +3,11 @@ simple-workflow-go
 
 A simple workflow framework written in Go
 
+[TODO insert image here]
+
+## Demo
+![demo.gif](asset/demo.gif)
+
 ## Quickstarts
 
 ### Backend
@@ -214,6 +219,9 @@ func main() {
 }
 ```
 
+#### Result
+![start_worker.gif](asset/start_worker.gif)
+
 ### Starting a workflow 
 
 After having our worker instance running, we can write codes to start workflows and wait for their result
@@ -232,15 +240,10 @@ err := client.ScheduleWorkflow(ctx, be, SubscriptionWorkflow, &SubscriptionWorkf
 })
 ```
 
-#### Await workflow result
+#### Result
+![schedule-workflow.gif](asset/schedule-workflow.gif)
 
-To wait for a workflow execution to complete and get its result, call `AwaitWorkflowResult` method
-
-```go
-workflowResult, workflowErr, err := client.AwaitWorkflowResult(ctx, be, SubscriptionWorkflow, workflowID)
-```
-
-#### Debugging running workflow
+#### Debugging a running workflow
 
 First, to debug a running workflow, we have to put several runtime variables inside the workflow.
 
@@ -255,6 +258,20 @@ if err != nil {
 }
 PrettyPrint(vars)
 ```
+
+#### Result
+![debug-workflow.gif](asset/debug-workflow.gif)
+
+#### Await workflow result
+
+To wait for a workflow execution to complete and get its result, call `AwaitWorkflowResult` method
+
+```go
+workflowResult, workflowErr, err := client.AwaitWorkflowResult(ctx, be, SubscriptionWorkflow, workflowID)
+```
+
+#### Result
+![await-workflow.gif](asset/await-workflow.gif)
 
 all above code were taken from [subscription_with_debug](examples/subscription_with_debug) example
 
