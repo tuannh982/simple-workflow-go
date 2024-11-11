@@ -9,6 +9,7 @@ import (
 	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
 	"go.uber.org/zap"
 	"os"
+	"time"
 )
 
 const (
@@ -33,6 +34,6 @@ func InitBackend(logger *zap.Logger) (backend.Backend, error) {
 		return nil, err
 	}
 	dataConverter := dataconverter.NewJsonDataConverter()
-	be := psql.NewPSQLBackend(hostname, dataConverter, db, logger)
+	be := psql.NewPSQLBackend(hostname, 5*time.Minute, dataConverter, db, logger)
 	return be, nil
 }
