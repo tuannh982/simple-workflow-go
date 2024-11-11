@@ -32,10 +32,6 @@ func InitBackend(logger *zap.Logger) (backend.Backend, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = psql.TruncateDB(db) // truncate DB data
-	if err != nil {
-		return nil, err
-	}
 	dataConverter := dataconverter.NewJsonDataConverter()
 	be := psql.NewPSQLBackend(hostname, dataConverter, db, logger)
 	return be, nil

@@ -171,6 +171,9 @@ func (b *be) AppendWorkflowEvent(ctx context.Context, workflowID string, event *
 			return err
 		}
 		currentTimestampUTC := b.getCurrentTimestampLocal()
+		if event.Timestamp == 0 {
+			event.Timestamp = currentTimestampUTC
+		}
 		historyEventBytes, err := b.dataConverter.Marshal(event)
 		if err != nil {
 			return err
@@ -179,7 +182,7 @@ func (b *be) AppendWorkflowEvent(ctx context.Context, workflowID string, event *
 			WorkflowID: workflowID,
 			EventID:    b.newUuidString(),
 			CreatedAt:  currentTimestampUTC,
-			VisibleAt:  currentTimestampUTC,
+			VisibleAt:  event.Timestamp,
 			Payload:    historyEventBytes,
 		}
 		if err = b.eventRepo.InsertEvents(uowCtx, []*persistent.Event{&e}); err != nil {

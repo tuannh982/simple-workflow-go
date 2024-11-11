@@ -18,6 +18,9 @@ type HistoryEvent struct {
 	// timers
 	TimerCreated *TimerCreated `json:",omitempty"`
 	TimerFired   *TimerFired   `json:",omitempty"`
+
+	// external events
+	ExternalEventReceived *ExternalEventReceived `json:",omitempty"`
 }
 
 func (e *HistoryEvent) GetType() string {
@@ -37,6 +40,8 @@ func (e *HistoryEvent) GetType() string {
 		return "TimerCreated"
 	} else if e.TimerFired != nil {
 		return "TimerFired"
+	} else if e.ExternalEventReceived != nil {
+		return "ExternalEventReceived"
 	}
 	return "unknown"
 }

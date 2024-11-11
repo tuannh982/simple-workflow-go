@@ -90,3 +90,19 @@ func AwaitWorkflowResult[T any, R any](
 		}
 	}
 }
+
+func SignalWorkflow(
+	ctx context.Context,
+	backend backend.Backend,
+	workflowID string,
+	eventName string,
+	eventInput []byte,
+) error {
+	he := &history.HistoryEvent{
+		ExternalEventReceived: &history.ExternalEventReceived{
+			EventName: eventName,
+			Input:     eventInput,
+		},
+	}
+	return backend.AppendWorkflowEvent(ctx, workflowID, he)
+}
