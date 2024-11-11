@@ -21,7 +21,7 @@ type Task struct {
 	TaskType      string  `gorm:"column:task_type;type:varchar(255);index:idx_task_type_locked_by_visible_at"`
 	NumAttempted  int32   `gorm:"column:num_attempted;type:integer"`
 	LockedBy      *string `gorm:"column:locked_by;type:varchar(255);index:idx_task_type_locked_by_visible_at"`
-	LockedAt      int64   `gorm:"column:locked_at;type:bigint"` // TODO implement unlock worker later
+	LockedAt      int64   `gorm:"column:locked_at;type:bigint"`
 	CreatedAt     int64   `gorm:"column:created_at;type:bigint"`
 	VisibleAt     int64   `gorm:"column:visible_at;type:bigint;index:idx_task_type_locked_by_visible_at"`
 	LastTouch     int64   `gorm:"column:last_touch;type:bigint"`
@@ -36,7 +36,7 @@ type TaskRepository interface {
 	ReleaseTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string, reason *string, nextScheduleTimestamp *int64) error
 	DeleteTask(ctx context.Context, workflowID string, taskID string) error
 	TouchTask(ctx context.Context, workflowID string, taskID string) error
-	GetAndLockAvailableTask(ctx context.Context, taskType task.TaskType, lockedBy string) (*Task, error)
+	GetAndLockAvailableTask(ctx context.Context, taskType task.TaskType, lockedBy string, lockExpirationDuration time.Duration) (*Task, error)
 	ResetTaskLastTouchTimestamp(ctx context.Context, workflowID string, taskID string) error
 }
 
@@ -74,6 +74,7 @@ func (r *taskRepository) ReleaseTask(ctx context.Context, workflowID string, tas
 	updates := map[string]interface{}{
 		"num_attempted":  gorm.Expr("num_attempted + 1"),
 		"release_reason": reason,
+		"locked_by":      nil,
 	}
 	if nextScheduleTimestamp != nil {
 		updates["visible_at"] = *nextScheduleTimestamp
@@ -105,7 +106,7 @@ func (r *taskRepository) TouchTask(ctx context.Context, workflowID string, taskI
 	return nil
 }
 
-func (r *taskRepository) GetAndLockAvailableTask(ctx context.Context, taskType task.TaskType, lockedBy string) (*Task, error) {
+func (r *taskRepository) GetAndLockAvailableTask(ctx context.Context, taskType task.TaskType, lockedBy string, lockExpirationDuration time.Duration) (*Task, error) {
 	uow := r.UnitOfWork(ctx)
 	now := time.Now().UnixMilli()
 	t := &Task{}
@@ -115,7 +116,10 @@ func (r *taskRepository) GetAndLockAvailableTask(ctx context.Context, taskType t
 			clause.Locking{Strength: "UPDATE"},
 			clause.Returning{},
 		).
-		Where("task_type = ? AND (locked_by IS NULL OR locked_by = ?) AND visible_at < ?", taskType, lockedBy, now).
+		Where(
+			"task_type = ? AND (locked_by IS NULL OR locked_by = ? OR locked_at < ?) AND visible_at < ?",
+			taskType, lockedBy, now-lockExpirationDuration.Milliseconds(), now,
+		).
 		Order("last_touch ASC").
 		Updates(map[string]interface{}{
 			"locked_by":  lockedBy,

@@ -142,6 +142,8 @@ func (w *WorkflowRuntime) processEvent(event *history.HistoryEvent) error {
 		err = w.handleTimerCreated(event)
 	} else if e := event.TimerFired; e != nil {
 		err = w.handleTimerFired(event)
+	} else if e := event.ExternalEventReceived; e != nil {
+		err = w.handleExternalEventReceived(event)
 	} else {
 		err = fmt.Errorf("don't know how to handle event %v", event)
 	}
@@ -178,6 +180,7 @@ func (w *WorkflowRuntime) handleWorkflowExecutionStarted(event *history.HistoryE
 			return nil
 		}
 		w.WorkflowExecutionStartedTimestamp = event.Timestamp
+		w.CurrentTimestamp = event.Timestamp
 		w.WorkflowExecutionStartedEvent = event.WorkflowExecutionStarted
 		w.Version = event.WorkflowExecutionStarted.Version
 		name := e.Name
@@ -355,6 +358,20 @@ func (w *WorkflowRuntime) handleTimerFired(event *history.HistoryEvent) error {
 		return nil
 	} else {
 		return fmt.Errorf("expect TimerFired event, got %v", e)
+	}
+}
+
+func (w *WorkflowRuntime) handleExternalEventReceived(event *history.HistoryEvent) error {
+	if e := event.ExternalEventReceived; e != nil {
+		callbackRegistry := w.WorkflowExecutionContext.EventCallbacks
+		if callbacks, ok := callbackRegistry[e.EventName]; ok {
+			for _, callback := range callbacks {
+				callback(e.Input)
+			}
+		}
+		return nil
+	} else {
+		return fmt.Errorf("expect ExternalEventReceived event, got %v", e)
 	}
 }
 

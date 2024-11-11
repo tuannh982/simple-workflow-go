@@ -56,3 +56,11 @@ func SetVar[T any](ctx context.Context, name string, value T) {
 	workflowCtx := workflow.MustExtractWorkflowExecutionContext(ctx)
 	workflowCtx.UserDefinedVars[name] = value
 }
+
+func OnEvent(ctx context.Context, eventName string, callback func([]byte)) {
+	workflowCtx := workflow.MustExtractWorkflowExecutionContext(ctx)
+	if _, ok := workflowCtx.EventCallbacks[eventName]; !ok {
+		workflowCtx.EventCallbacks[eventName] = make([]func([]byte), 0)
+	}
+	workflowCtx.EventCallbacks[eventName] = append(workflowCtx.EventCallbacks[eventName], callback)
+}
