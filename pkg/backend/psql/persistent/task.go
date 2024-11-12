@@ -34,8 +34,8 @@ type TaskRepository interface {
 	GetTask(ctx context.Context, workflowID string, taskID string) (*Task, error)
 	InsertTasks(ctx context.Context, tasks []*Task) error
 	ReleaseTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string, reason *string, nextScheduleTimestamp *int64) error
-	DeleteTask(ctx context.Context, workflowID string, taskID string) error
-	TouchTask(ctx context.Context, workflowID string, taskID string) error
+	DeleteTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string) error
+	DeleteTaskUnsafe(ctx context.Context, workflowID string, taskID string, taskType task.TaskType) error
 	GetAndLockAvailableTask(ctx context.Context, taskType task.TaskType, lockedBy string, lockExpirationDuration time.Duration) (*Task, error)
 	ResetTaskLastTouchTimestamp(ctx context.Context, workflowID string, taskID string) error
 }
@@ -72,6 +72,7 @@ func (r *taskRepository) InsertTasks(ctx context.Context, task []*Task) error {
 func (r *taskRepository) ReleaseTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string, reason *string, nextScheduleTimestamp *int64) error {
 	uow := r.UnitOfWork(ctx)
 	updates := map[string]interface{}{
+		"last_touch":     time.Now().UnixMilli(),
 		"num_attempted":  gorm.Expr("num_attempted + 1"),
 		"release_reason": reason,
 		"locked_by":      nil,
@@ -79,7 +80,10 @@ func (r *taskRepository) ReleaseTask(ctx context.Context, workflowID string, tas
 	if nextScheduleTimestamp != nil {
 		updates["visible_at"] = *nextScheduleTimestamp
 	}
-	result := uow.Tx.Model(&Task{}).Where("workflow_id = ? AND task_id = ? AND task_type = ? AND locked_by = ?", workflowID, taskID, string(taskType), lockedBy).Updates(updates)
+	result := uow.Tx.Model(&Task{}).Where(
+		"workflow_id = ? AND task_id = ? AND task_type = ? AND locked_by = ?",
+		workflowID, taskID, string(taskType), lockedBy,
+	).Updates(updates)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -89,19 +93,32 @@ func (r *taskRepository) ReleaseTask(ctx context.Context, workflowID string, tas
 	return nil
 }
 
-func (r *taskRepository) DeleteTask(ctx context.Context, workflowID string, taskID string) error {
+func (r *taskRepository) DeleteTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string) error {
 	uow := r.UnitOfWork(ctx)
-	result := uow.Tx.Model(&Task{}).Where("workflow_id = ? AND task_id = ?", workflowID, taskID).Delete(&Task{})
-	return result.Error
-}
-
-func (r *taskRepository) TouchTask(ctx context.Context, workflowID string, taskID string) error {
-	uow := r.UnitOfWork(ctx)
-	result := uow.Tx.Model(&Task{}).Where("workflow_id = ? AND task_id = ?", workflowID, taskID).Updates(map[string]interface{}{
-		"last_touch": time.Now().UnixMilli(),
-	})
+	result := uow.Tx.Model(&Task{}).Where(
+		"workflow_id = ? AND task_id = ? AND task_type = ? AND locked_by = ?",
+		workflowID, taskID, string(taskType), lockedBy,
+	).Delete(&Task{})
 	if result.Error != nil {
 		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrTaskLost
+	}
+	return nil
+}
+
+func (r *taskRepository) DeleteTaskUnsafe(ctx context.Context, workflowID string, taskID string, taskType task.TaskType) error {
+	uow := r.UnitOfWork(ctx)
+	result := uow.Tx.Model(&Task{}).Where(
+		"workflow_id = ? AND task_id = ? AND task_type = ?",
+		workflowID, taskID, string(taskType),
+	).Delete(&Task{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrTaskLost
 	}
 	return nil
 }
@@ -112,21 +129,23 @@ func (r *taskRepository) GetAndLockAvailableTask(ctx context.Context, taskType t
 	t := &Task{}
 	result := uow.Tx.
 		Model(&Task{}).
-		Clauses(
-			clause.Locking{Strength: "UPDATE"},
-			clause.Returning{},
-		).
+		Clauses(clause.Locking{Strength: "UPDATE"}).
 		Where(
-			"task_type = ? AND (locked_by IS NULL OR locked_by = ? OR locked_at < ?) AND visible_at < ?",
-			taskType, lockedBy, now-lockExpirationDuration.Milliseconds(), now,
+			"task_type = ? AND (locked_by IS NULL OR locked_at < ?) AND visible_at < ?",
+			string(taskType), now-lockExpirationDuration.Milliseconds(), now,
 		).
-		Order("last_touch ASC").
+		Order("last_touch ASC").First(&t)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	result = uow.Tx.
+		Model(&Task{}).
+		Where("workflow_id = ? AND task_id = ?", t.WorkflowID, t.TaskID).
 		Updates(map[string]interface{}{
 			"locked_by":  lockedBy,
-			"locked_at":  time.Now().UnixMilli(),
-			"last_touch": time.Now().UnixMilli(),
-		}).
-		First(&t)
+			"locked_at":  now,
+			"last_touch": now,
+		}).First(&t)
 	if result.Error != nil {
 		return nil, result.Error
 	}

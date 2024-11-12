@@ -31,7 +31,8 @@ type be struct {
 	taskRepo               persistent.TaskRepository
 	eventRepo              persistent.EventRepository
 	logger                 *zap.Logger
-	*sync.Mutex
+	workflowTaskMu         *sync.Mutex
+	activityTaskMu         *sync.Mutex
 }
 
 func NewPSQLBackend(
@@ -55,7 +56,8 @@ func NewPSQLBackend(
 		taskRepo:               taskRepo,
 		eventRepo:              eventRepo,
 		logger:                 logger,
-		Mutex:                  &sync.Mutex{},
+		workflowTaskMu:         &sync.Mutex{},
+		activityTaskMu:         &sync.Mutex{},
 	}
 }
 
@@ -217,6 +219,8 @@ func (b *be) GetWorkflowHistory(ctx context.Context, workflowID string) ([]*hist
 }
 
 func (b *be) GetWorkflowTask(ctx context.Context) (result *task.WorkflowTask, err error) {
+	b.workflowTaskMu.Lock()
+	defer b.workflowTaskMu.Unlock()
 	tx := b.db.Begin()
 	defer func() {
 		if err != nil {
@@ -276,24 +280,16 @@ func (b *be) GetWorkflowTask(ctx context.Context) (result *task.WorkflowTask, er
 }
 
 func (b *be) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTaskResult) error {
+	b.workflowTaskMu.Lock()
+	defer b.workflowTaskMu.Unlock()
 	err := b.db.Transaction(func(tx *gorm.DB) error {
 		uowCtx, err := b.createUow(ctx, tx)
 		if err != nil {
 			return err
 		}
 		currentTimestampUTC := b.getCurrentTimestampLocal()
-		// touch to trigger transaction lock
-		err = b.taskRepo.TouchTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID)
-		if err != nil {
+		if err = b.taskRepo.ReleaseTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID, task.TaskTypeWorkflow, b.lockedBy, nil, nil); err != nil {
 			return err
-		}
-		//
-		t, err := b.taskRepo.GetTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID)
-		if err != nil {
-			return err
-		}
-		if t.TaskType != string(task.TaskTypeWorkflow) || t.LockedBy == nil || *t.LockedBy != b.lockedBy {
-			return fmt.Errorf("task %s of workflow %s is locked by %v, expect %s", t.TaskID, t.WorkflowID, t.LockedBy, b.lockedBy)
 		}
 		isCompleted := false
 		processedEvents := result.Task.NewEvents
@@ -436,7 +432,7 @@ func (b *be) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTask
 			return err
 		}
 		if isCompleted {
-			if err = b.taskRepo.DeleteTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID); err != nil {
+			if err = b.taskRepo.DeleteTaskUnsafe(uowCtx, result.Task.WorkflowID, result.Task.TaskID, task.TaskTypeWorkflow); err != nil {
 				return err
 			}
 		} else if shouldNotifyWorkflowTask {
@@ -450,6 +446,8 @@ func (b *be) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTask
 }
 
 func (b *be) AbandonWorkflowTask(ctx context.Context, t *task.WorkflowTask, reason *string) error {
+	b.workflowTaskMu.Lock()
+	defer b.workflowTaskMu.Unlock()
 	err := b.db.Transaction(func(tx *gorm.DB) error {
 		uowCtx, err := b.createUow(ctx, tx)
 		if err != nil {
@@ -461,6 +459,8 @@ func (b *be) AbandonWorkflowTask(ctx context.Context, t *task.WorkflowTask, reas
 }
 
 func (b *be) GetActivityTask(ctx context.Context) (result *task.ActivityTask, err error) {
+	b.activityTaskMu.Lock()
+	defer b.activityTaskMu.Unlock()
 	tx := b.db.Begin()
 	defer func() {
 		if err != nil {
@@ -494,22 +494,14 @@ func (b *be) GetActivityTask(ctx context.Context) (result *task.ActivityTask, er
 }
 
 func (b *be) CompleteActivityTask(ctx context.Context, result *task.ActivityTaskResult) error {
+	b.activityTaskMu.Lock()
+	defer b.activityTaskMu.Unlock()
 	err := b.db.Transaction(func(tx *gorm.DB) error {
 		uowCtx, err := b.createUow(ctx, tx)
 		if err != nil {
 			return err
 		}
 		currentTimestampUTC := b.getCurrentTimestampLocal()
-		// touch to trigger transaction lock
-		err = b.taskRepo.TouchTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID)
-		if err != nil {
-			return err
-		}
-		//
-		err = b.taskRepo.DeleteTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID)
-		if err != nil {
-			return err
-		}
 		if result.ExecutionResult == nil {
 			return errors.New("execution result is nil")
 		}
@@ -531,6 +523,9 @@ func (b *be) CompleteActivityTask(ctx context.Context, result *task.ActivityTask
 			VisibleAt:  currentTimestampUTC,
 			Payload:    bytes,
 		}
+		if err = b.taskRepo.DeleteTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID, task.TaskTypeActivity, b.lockedBy); err != nil {
+			return err
+		}
 		if err = b.eventRepo.InsertEvents(uowCtx, []*persistent.Event{&event}); err != nil {
 			return err
 		}
@@ -543,6 +538,8 @@ func (b *be) CompleteActivityTask(ctx context.Context, result *task.ActivityTask
 }
 
 func (b *be) AbandonActivityTask(ctx context.Context, t *task.ActivityTask, reason *string, backoffDuration time.Duration) error {
+	b.activityTaskMu.Lock()
+	defer b.activityTaskMu.Unlock()
 	err := b.db.Transaction(func(tx *gorm.DB) error {
 		uowCtx, err := b.createUow(ctx, tx)
 		if err != nil {
