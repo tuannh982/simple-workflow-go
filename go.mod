@@ -1,4 +1,4 @@
-module github.com/tuannh982/simple-workflows-go
+module github.com/tuannh982/simple-workflow-go
 
 go 1.22
 
