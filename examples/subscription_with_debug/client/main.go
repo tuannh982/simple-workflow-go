@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/tuannh982/simple-workflows-go/examples"
-	"github.com/tuannh982/simple-workflows-go/examples/subscription_with_debug"
-	"github.com/tuannh982/simple-workflows-go/pkg/api/client"
-	"github.com/tuannh982/simple-workflows-go/pkg/api/debug"
+	"github.com/tuannh982/simple-workflow-go/examples"
+	"github.com/tuannh982/simple-workflow-go/examples/subscription_with_debug"
+	"github.com/tuannh982/simple-workflow-go/pkg/api/client"
+	"github.com/tuannh982/simple-workflow-go/pkg/api/debug"
 	"go.uber.org/zap"
 	"time"
 )

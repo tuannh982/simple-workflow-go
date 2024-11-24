@@ -2,7 +2,7 @@ package persistent
 
 import (
 	"context"
-	"github.com/tuannh982/simple-workflows-go/pkg/backend/psql/persistent/base"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend/psql/persistent/base"
 	"gorm.io/gorm"
 )
 

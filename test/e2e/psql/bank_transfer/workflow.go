@@ -6,7 +6,7 @@ package bank_transfer
 import (
 	"context"
 	"fmt"
-	"github.com/tuannh982/simple-workflows-go/pkg/api/workflow"
+	"github.com/tuannh982/simple-workflow-go/pkg/api/workflow"
 )
 
 type Void struct{}

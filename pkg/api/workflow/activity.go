@@ -1,7 +1,7 @@
 package workflow
 
 import (
-	"github.com/tuannh982/simple-workflows-go/internal/workflow"
+	"github.com/tuannh982/simple-workflow-go/internal/workflow"
 )
 
 type AwaitableActivity[R any] struct {

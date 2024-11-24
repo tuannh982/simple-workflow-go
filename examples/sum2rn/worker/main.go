@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"github.com/tuannh982/simple-workflows-go/examples"
-	"github.com/tuannh982/simple-workflows-go/examples/sum2rn"
-	"github.com/tuannh982/simple-workflows-go/pkg/api/worker"
+	"github.com/tuannh982/simple-workflow-go/examples"
+	"github.com/tuannh982/simple-workflow-go/examples/sum2rn"
+	"github.com/tuannh982/simple-workflow-go/pkg/api/worker"
 	"go.uber.org/zap"
 	"os"
 	"os/signal"

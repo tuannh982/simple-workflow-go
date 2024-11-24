@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/tuannh982/simple-workflows-go/examples"
-	"github.com/tuannh982/simple-workflows-go/examples/sum2rn"
-	"github.com/tuannh982/simple-workflows-go/pkg/api/client"
+	"github.com/tuannh982/simple-workflow-go/examples"
+	"github.com/tuannh982/simple-workflow-go/examples/sum2rn"
+	"github.com/tuannh982/simple-workflow-go/pkg/api/client"
 	"go.uber.org/zap"
 )
 

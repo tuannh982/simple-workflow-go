@@ -3,10 +3,10 @@ package worker
 import (
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/tuannh982/simple-workflows-go/pkg/backend"
-	"github.com/tuannh982/simple-workflows-go/pkg/registry"
-	"github.com/tuannh982/simple-workflows-go/pkg/utils/commons"
-	"github.com/tuannh982/simple-workflows-go/pkg/worker/workflow_worker"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend"
+	"github.com/tuannh982/simple-workflow-go/pkg/registry"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/commons"
+	"github.com/tuannh982/simple-workflow-go/pkg/worker/workflow_worker"
 	"go.uber.org/zap"
 	"os"
 )

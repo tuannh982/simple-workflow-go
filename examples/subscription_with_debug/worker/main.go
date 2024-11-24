@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"github.com/tuannh982/simple-workflows-go/examples"
-	"github.com/tuannh982/simple-workflows-go/examples/subscription_with_debug"
-	"github.com/tuannh982/simple-workflows-go/pkg/api/worker"
-	"github.com/tuannh982/simple-workflows-go/pkg/worker/activity_worker"
+	"github.com/tuannh982/simple-workflow-go/examples"
+	"github.com/tuannh982/simple-workflow-go/examples/subscription_with_debug"
+	"github.com/tuannh982/simple-workflow-go/pkg/api/worker"
+	"github.com/tuannh982/simple-workflow-go/pkg/worker/activity_worker"
 	"os"
 	"os/signal"
 	"syscall"

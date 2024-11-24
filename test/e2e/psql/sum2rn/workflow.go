@@ -5,7 +5,7 @@ package concurrent_task
 
 import (
 	"context"
-	"github.com/tuannh982/simple-workflows-go/pkg/api/workflow"
+	"github.com/tuannh982/simple-workflow-go/pkg/api/workflow"
 )
 
 type Seed struct {

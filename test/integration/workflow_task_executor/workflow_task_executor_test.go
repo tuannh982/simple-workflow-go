@@ -3,11 +3,11 @@ package workflow_task_executor
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
-	"github.com/tuannh982/simple-workflows-go/internal/fn"
-	"github.com/tuannh982/simple-workflows-go/pkg/dto"
-	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
-	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
-	"github.com/tuannh982/simple-workflows-go/pkg/utils/ptr"
+	"github.com/tuannh982/simple-workflow-go/internal/fn"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto/history"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/ptr"
 	"testing"
 	"time"
 )

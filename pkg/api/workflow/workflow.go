@@ -2,9 +2,9 @@ package workflow
 
 import (
 	"context"
-	"github.com/tuannh982/simple-workflows-go/internal/workflow"
-	"github.com/tuannh982/simple-workflows-go/pkg/types"
-	"github.com/tuannh982/simple-workflows-go/pkg/utils/awaitable"
+	"github.com/tuannh982/simple-workflow-go/internal/workflow"
+	"github.com/tuannh982/simple-workflow-go/pkg/types"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/awaitable"
 	"time"
 )
 

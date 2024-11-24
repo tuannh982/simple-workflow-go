@@ -3,12 +3,12 @@ package activity_worker
 import (
 	"context"
 	"fmt"
-	"github.com/tuannh982/simple-workflows-go/internal/activity"
-	"github.com/tuannh982/simple-workflows-go/pkg/backend"
-	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
-	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
-	"github.com/tuannh982/simple-workflows-go/pkg/registry"
-	"github.com/tuannh982/simple-workflows-go/pkg/utils/worker"
+	"github.com/tuannh982/simple-workflow-go/internal/activity"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend"
+	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflow-go/pkg/registry"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/worker"
 	"go.uber.org/zap"
 )
 

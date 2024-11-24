@@ -5,8 +5,8 @@ package concurrent_task
 
 import (
 	"context"
-	"github.com/tuannh982/simple-workflows-go/pkg/api/workflow"
-	"github.com/tuannh982/simple-workflows-go/pkg/utils/awaitable"
+	"github.com/tuannh982/simple-workflow-go/pkg/api/workflow"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/awaitable"
 )
 
 type SumWorkflowInput struct {

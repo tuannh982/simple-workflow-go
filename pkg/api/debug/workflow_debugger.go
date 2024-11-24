@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/tuannh982/simple-workflows-go/internal/fn"
-	workflow2 "github.com/tuannh982/simple-workflows-go/internal/workflow"
-	"github.com/tuannh982/simple-workflows-go/pkg/backend"
-	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
-	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
-	"github.com/tuannh982/simple-workflows-go/pkg/registry"
+	"github.com/tuannh982/simple-workflow-go/internal/fn"
+	workflow2 "github.com/tuannh982/simple-workflow-go/internal/workflow"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto/history"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflow-go/pkg/registry"
 )
 
 type WorkflowDebugger interface {

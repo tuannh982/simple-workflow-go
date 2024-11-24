@@ -3,11 +3,11 @@ package activity
 import (
 	"context"
 	"fmt"
-	"github.com/tuannh982/simple-workflows-go/internal/fn"
-	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
-	"github.com/tuannh982/simple-workflows-go/pkg/dto"
-	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
-	"github.com/tuannh982/simple-workflows-go/pkg/registry"
+	"github.com/tuannh982/simple-workflow-go/internal/fn"
+	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflow-go/pkg/registry"
 	"go.uber.org/zap"
 	"runtime/debug"
 )

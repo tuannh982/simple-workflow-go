@@ -1,7 +1,7 @@
 package workflow
 
 import (
-	"github.com/tuannh982/simple-workflows-go/pkg/utils/promise"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/promise"
 )
 
 type TimerPromise struct {

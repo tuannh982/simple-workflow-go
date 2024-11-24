@@ -1,8 +1,8 @@
 package activity_worker
 
 import (
-	"github.com/tuannh982/simple-workflows-go/internal/activity"
-	"github.com/tuannh982/simple-workflows-go/pkg/utils/worker"
+	"github.com/tuannh982/simple-workflow-go/internal/activity"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/worker"
 	"time"
 )
 

@@ -3,11 +3,11 @@ package client
 import (
 	"context"
 	"errors"
-	"github.com/tuannh982/simple-workflows-go/internal/fn"
-	"github.com/tuannh982/simple-workflows-go/pkg/backend"
-	"github.com/tuannh982/simple-workflows-go/pkg/dto"
-	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
-	"github.com/tuannh982/simple-workflows-go/pkg/types"
+	"github.com/tuannh982/simple-workflow-go/internal/fn"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto/history"
+	"github.com/tuannh982/simple-workflow-go/pkg/types"
 	"time"
 )
 

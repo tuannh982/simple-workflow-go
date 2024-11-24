@@ -2,7 +2,7 @@ package collections
 
 import (
 	"fmt"
-	"github.com/tuannh982/simple-workflows-go/pkg/utils/ptr"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/ptr"
 )
 
 func MapArray[A any, B any](a []A, f func(A) B) []B {

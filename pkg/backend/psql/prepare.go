@@ -2,7 +2,7 @@ package psql
 
 import (
 	"fmt"
-	"github.com/tuannh982/simple-workflows-go/pkg/backend/psql/persistent"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend/psql/persistent"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

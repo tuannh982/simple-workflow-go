@@ -4,9 +4,9 @@
 package psql
 
 import (
-	"github.com/tuannh982/simple-workflows-go/pkg/backend"
-	"github.com/tuannh982/simple-workflows-go/pkg/backend/psql"
-	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend/psql"
+	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

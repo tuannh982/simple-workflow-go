@@ -3,7 +3,7 @@ package worker
 import (
 	"context"
 	"fmt"
-	"github.com/tuannh982/simple-workflows-go/pkg/utils/backoff"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/backoff"
 	"go.uber.org/zap"
 	"sync"
 	"time"

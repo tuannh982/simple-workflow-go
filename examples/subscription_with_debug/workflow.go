@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/tuannh982/simple-workflows-go/pkg/api/workflow"
+	"github.com/tuannh982/simple-workflow-go/pkg/api/workflow"
 	"math/rand"
 	"time"
 )

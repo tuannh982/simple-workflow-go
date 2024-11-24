@@ -1,7 +1,7 @@
 package history
 
 import (
-	"github.com/tuannh982/simple-workflows-go/pkg/dto"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto"
 )
 
 type ParentWorkflowInfo struct {

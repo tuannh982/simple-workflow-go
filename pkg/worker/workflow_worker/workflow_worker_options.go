@@ -1,7 +1,7 @@
 package workflow_worker
 
 import (
-	"github.com/tuannh982/simple-workflows-go/pkg/utils/worker"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/worker"
 	"time"
 )
 

@@ -2,7 +2,7 @@ package registry
 
 import (
 	"fmt"
-	"github.com/tuannh982/simple-workflows-go/internal/fn"
+	"github.com/tuannh982/simple-workflow-go/internal/fn"
 )
 
 type WorkflowRegistry struct {

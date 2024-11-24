@@ -3,7 +3,7 @@ package workers
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
-	"github.com/tuannh982/simple-workflows-go/pkg/api/client"
+	"github.com/tuannh982/simple-workflow-go/pkg/api/client"
 	"go.uber.org/zap"
 	"testing"
 )

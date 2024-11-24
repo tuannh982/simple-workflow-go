@@ -1,7 +1,7 @@
 package task
 
 import (
-	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto/history"
 )
 
 type WorkflowTask struct {

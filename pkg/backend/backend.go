@@ -2,10 +2,10 @@ package backend
 
 import (
 	"context"
-	"github.com/tuannh982/simple-workflows-go/pkg/dataconverter"
-	"github.com/tuannh982/simple-workflows-go/pkg/dto"
-	"github.com/tuannh982/simple-workflows-go/pkg/dto/history"
-	"github.com/tuannh982/simple-workflows-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto/history"
+	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
 	"time"
 )
 
