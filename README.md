@@ -275,10 +275,6 @@ workflowResult, workflowErr, err := client.AwaitWorkflowResult(ctx, be, Subscrip
 
 all above code were taken from [subscription_with_debug](examples/subscription_with_debug) example
 
-## Build & Test
-
-Run `build.sh` to perform build, unit test, integration test and e2e test
-
 ## Examples
 
 See [examples](examples)

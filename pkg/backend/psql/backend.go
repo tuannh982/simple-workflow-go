@@ -453,7 +453,15 @@ func (b *be) AbandonWorkflowTask(ctx context.Context, t *task.WorkflowTask, reas
 		if err != nil {
 			return err
 		}
-		return b.taskRepo.ReleaseTask(uowCtx, t.WorkflowID, t.TaskID, task.TaskTypeWorkflow, b.lockedBy, reason, nil)
+		err = b.taskRepo.ReleaseTask(uowCtx, t.WorkflowID, t.TaskID, task.TaskTypeWorkflow, b.lockedBy, reason, nil)
+		if err != nil {
+			return err
+		}
+		_, err = b.eventRepo.ReleaseEventsByWorkflowIDAndHeldBy(uowCtx, t.WorkflowID, b.lockedBy)
+		if err != nil {
+			return err
+		}
+		return nil
 	})
 	return HandleSQLError(err)
 }

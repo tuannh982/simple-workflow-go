@@ -20,6 +20,7 @@ type EventRepository interface {
 	InsertEvents(ctx context.Context, events []*Event) error
 	DeleteEventsByWorkflowID(ctx context.Context, workflowID string) (int64, error)
 	DeleteEventsByWorkflowIDAndHeldBy(ctx context.Context, workflowID string, heldBy string) (int64, error)
+	ReleaseEventsByWorkflowIDAndHeldBy(ctx context.Context, workflowID string, heldBy string) (int64, error)
 	GetAvailableWorkflowEventsAndLock(ctx context.Context, workflowID string, heldBy string) ([]*Event, error)
 }
 
@@ -48,6 +49,15 @@ func (r *eventRepository) DeleteEventsByWorkflowID(ctx context.Context, workflow
 func (r *eventRepository) DeleteEventsByWorkflowIDAndHeldBy(ctx context.Context, workflowID string, heldBy string) (int64, error) {
 	uow := r.UnitOfWork(ctx)
 	result := uow.Tx.Model(&Event{}).Where("workflow_id = ? AND held_by = ?", workflowID, heldBy).Delete(&Event{})
+	return result.RowsAffected, result.Error
+}
+
+func (r *eventRepository) ReleaseEventsByWorkflowIDAndHeldBy(ctx context.Context, workflowID string, heldBy string) (int64, error) {
+	uow := r.UnitOfWork(ctx)
+	updates := map[string]interface{}{
+		"held_by": nil,
+	}
+	result := uow.Tx.Model(&Event{}).Where("workflow_id = ? AND held_by = ?", workflowID, heldBy).Updates(updates)
 	return result.RowsAffected, result.Error
 }
 
