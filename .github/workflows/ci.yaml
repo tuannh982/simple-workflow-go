@@ -15,4 +15,4 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Build & Test
-        run: ./build.sh
+        run: sh ./build.sh
