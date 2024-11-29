@@ -1,10 +1,13 @@
-#!/bin/sh
+#!/bin/bash
 
-set -o pipefail
+set -eo pipefail
 
 go clean
 go clean -testcache
 go build ./...
 go test ./...
 go test -race ./...
-go test -tags e2e -p 1 ./test/e2e/...
+
+if [[ $ENABLE_E2E_TEST ]]; then
+  go test -tags e2e -p 1 ./test/e2e/...
+fi
