@@ -1,20 +1,15 @@
 package activity
 
-import "context"
+import "github.com/tuannh982/simple-workflow-go/pkg/dto/task"
 
 type ActivityExecutionContext struct {
+	Task *task.ActivityTask
 }
 
-func NewActivityExecutionContext() *ActivityExecutionContext {
-	return &ActivityExecutionContext{}
-}
-
-const ActivityExecutionContextKey = "activityExecutionContext"
-
-func InjectActivityExecutionContext(ctx context.Context, activityExecutionContext *ActivityExecutionContext) context.Context {
-	return context.WithValue(ctx, ActivityExecutionContextKey, activityExecutionContext)
-}
-
-func MustExtractActivityExecutionContext(ctx context.Context) *ActivityExecutionContext {
-	return ctx.Value(ActivityExecutionContextKey).(*ActivityExecutionContext)
+func NewActivityExecutionContext(
+	task *task.ActivityTask,
+) *ActivityExecutionContext {
+	return &ActivityExecutionContext{
+		Task: task,
+	}
 }

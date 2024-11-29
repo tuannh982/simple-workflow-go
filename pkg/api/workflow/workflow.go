@@ -8,16 +8,6 @@ import (
 	"time"
 )
 
-func GetWorkflowExecutionStartedTimestamp(ctx context.Context) int64 {
-	workflowCtx := workflow.MustExtractWorkflowExecutionContext(ctx)
-	return workflowCtx.WorkflowRuntime.WorkflowExecutionStartedTimestamp
-}
-
-func GetVersion(ctx context.Context) string {
-	workflowCtx := workflow.MustExtractWorkflowExecutionContext(ctx)
-	return workflowCtx.WorkflowRuntime.Version
-}
-
 func CallActivity[T any, R any](ctx context.Context, activity types.Activity[T, R], input *T) awaitable.Awaitable[*R] {
 	workflowCtx := workflow.MustExtractWorkflowExecutionContext(ctx)
 	promise := workflowCtx.WorkflowRuntime.ScheduleNewActivity(activity, input)
@@ -25,11 +15,6 @@ func CallActivity[T any, R any](ctx context.Context, activity types.Activity[T, 
 		Activity: activity,
 		Promise:  promise,
 	}
-}
-
-func GetCurrentTimestamp(ctx context.Context) time.Time {
-	workflowCtx := workflow.MustExtractWorkflowExecutionContext(ctx)
-	return time.UnixMilli(workflowCtx.WorkflowRuntime.CurrentTimestamp)
 }
 
 func WaitFor(ctx context.Context, delay time.Duration) {
