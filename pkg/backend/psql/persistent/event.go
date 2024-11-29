@@ -21,7 +21,7 @@ type EventRepository interface {
 	DeleteEventsByWorkflowID(ctx context.Context, workflowID string) (int64, error)
 	DeleteEventsByWorkflowIDAndHeldBy(ctx context.Context, workflowID string, heldBy string) (int64, error)
 	ReleaseEventsByWorkflowIDAndHeldBy(ctx context.Context, workflowID string, heldBy string) (int64, error)
-	GetAvailableWorkflowEventsAndLock(ctx context.Context, workflowID string, heldBy string) ([]*Event, error)
+	GetAvailableWorkflowEventsAndLock(ctx context.Context, workflowID string, heldBy string, previouslyHeldBy *string) ([]*Event, error)
 }
 
 type eventRepository struct {
@@ -61,13 +61,13 @@ func (r *eventRepository) ReleaseEventsByWorkflowIDAndHeldBy(ctx context.Context
 	return result.RowsAffected, result.Error
 }
 
-func (r *eventRepository) GetAvailableWorkflowEventsAndLock(ctx context.Context, workflowID string, heldBy string) ([]*Event, error) {
+func (r *eventRepository) GetAvailableWorkflowEventsAndLock(ctx context.Context, workflowID string, heldBy string, previouslyHeldBy *string) ([]*Event, error) {
 	uow := r.UnitOfWork(ctx)
 	now := time.Now().UnixMilli()
 	result := uow.Tx.Model(&Event{}).Where(
 		"workflow_id = ? AND (held_by IS NULL OR held_by = ?) AND visible_at < ?",
 		workflowID,
-		heldBy,
+		previouslyHeldBy,
 		now,
 	).Clauses().Updates(map[string]interface{}{
 		"held_by": heldBy,

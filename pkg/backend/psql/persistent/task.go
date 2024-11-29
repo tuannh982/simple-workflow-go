@@ -36,7 +36,7 @@ type TaskRepository interface {
 	ReleaseTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string, reason *string, nextScheduleTimestamp *int64) error
 	DeleteTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string) error
 	DeleteTaskUnsafe(ctx context.Context, workflowID string, taskID string, taskType task.TaskType) error
-	GetAndLockAvailableTask(ctx context.Context, taskType task.TaskType, lockedBy string, lockExpirationDuration time.Duration) (*Task, error)
+	GetAndLockAvailableTask(ctx context.Context, taskType task.TaskType, lockedBy string, lockExpirationDuration time.Duration) (*Task, *string, error)
 	ResetTaskLastTouchTimestamp(ctx context.Context, workflowID string, taskID string) error
 }
 
@@ -123,7 +123,7 @@ func (r *taskRepository) DeleteTaskUnsafe(ctx context.Context, workflowID string
 	return nil
 }
 
-func (r *taskRepository) GetAndLockAvailableTask(ctx context.Context, taskType task.TaskType, lockedBy string, lockExpirationDuration time.Duration) (*Task, error) {
+func (r *taskRepository) GetAndLockAvailableTask(ctx context.Context, taskType task.TaskType, lockedBy string, lockExpirationDuration time.Duration) (*Task, *string, error) {
 	uow := r.UnitOfWork(ctx)
 	now := time.Now().UnixMilli()
 	t := &Task{}
@@ -136,8 +136,9 @@ func (r *taskRepository) GetAndLockAvailableTask(ctx context.Context, taskType t
 		).
 		Order("last_touch ASC").First(&t)
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, nil, result.Error
 	}
+	previousLockedBy := t.LockedBy
 	result = uow.Tx.
 		Model(&Task{}).
 		Where("workflow_id = ? AND task_id = ?", t.WorkflowID, t.TaskID).
@@ -147,9 +148,9 @@ func (r *taskRepository) GetAndLockAvailableTask(ctx context.Context, taskType t
 			"last_touch": now,
 		}).First(&t)
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, nil, result.Error
 	}
-	return t, nil
+	return t, previousLockedBy, nil
 }
 
 func (r *taskRepository) ResetTaskLastTouchTimestamp(ctx context.Context, workflowID string, taskID string) error {

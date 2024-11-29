@@ -234,7 +234,7 @@ func (b *be) GetWorkflowTask(ctx context.Context) (result *task.WorkflowTask, er
 		return nil, HandleSQLError(err)
 	}
 	currentTimestampUTC := b.getCurrentTimestampLocal()
-	t, err := b.taskRepo.GetAndLockAvailableTask(uowCtx, task.TaskTypeWorkflow, b.lockedBy, b.lockExpirationDuration)
+	t, previouslyLockedBy, err := b.taskRepo.GetAndLockAvailableTask(uowCtx, task.TaskTypeWorkflow, b.lockedBy, b.lockExpirationDuration)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, worker.ErrNoTask
@@ -245,7 +245,7 @@ func (b *be) GetWorkflowTask(ctx context.Context) (result *task.WorkflowTask, er
 	if err != nil {
 		return nil, err
 	}
-	pEvents, err := b.eventRepo.GetAvailableWorkflowEventsAndLock(uowCtx, t.WorkflowID, b.lockedBy)
+	pEvents, err := b.eventRepo.GetAvailableWorkflowEventsAndLock(uowCtx, t.WorkflowID, b.lockedBy, previouslyLockedBy)
 	if err != nil {
 		return nil, err
 	}
@@ -481,7 +481,7 @@ func (b *be) GetActivityTask(ctx context.Context) (result *task.ActivityTask, er
 	if err != nil {
 		return nil, HandleSQLError(err)
 	}
-	t, err := b.taskRepo.GetAndLockAvailableTask(uowCtx, task.TaskTypeActivity, b.lockedBy, b.lockExpirationDuration)
+	t, _, err := b.taskRepo.GetAndLockAvailableTask(uowCtx, task.TaskTypeActivity, b.lockedBy, b.lockExpirationDuration)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, worker.ErrNoTask
