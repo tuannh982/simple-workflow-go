@@ -57,7 +57,7 @@ be, err := examples.InitPSQLBackend(logger)
 
 ### Activities
 Activity is a function that used to implement service calls, I/O operation, 
-long running operations, or costly actions which are not prefer to be re-executed
+long-running operations, or costly actions which are not prefer to be re-executed
 
 ```go
 type PaymentInput struct {

@@ -60,7 +60,8 @@ func (a *activityTaskExecutor) Execute(_ context.Context, t *task.ActivityTask) 
 	name := t.TaskScheduleEvent.Name
 	inputBytes := t.TaskScheduleEvent.Input
 	if activity, ok := a.activityRegistry.Activities[name]; ok {
-		callCtx := InjectActivityExecutionContext(context.Background(), NewActivityExecutionContext())
+		activityExecutionCtx := NewActivityExecutionContext(t)
+		callCtx := InjectActivityExecutionContext(context.Background(), activityExecutionCtx)
 		input := fn.InitArgument(activity)
 		err := a.dataConverter.Unmarshal(inputBytes, input)
 		if err != nil {

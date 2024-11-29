@@ -25,6 +25,22 @@ func ScheduleWorkflow[T any, R any](
 	options WorkflowScheduleOptions,
 ) error {
 	name := fn.GetFunctionName(workflow)
+	return ScheduleWorkflowUnsafe(
+		ctx,
+		backend,
+		name,
+		input,
+		options,
+	)
+}
+
+func ScheduleWorkflowUnsafe(
+	ctx context.Context,
+	backend backend.Backend,
+	workflowName string,
+	input any,
+	options WorkflowScheduleOptions,
+) error {
 	inputBytes, err := backend.DataConverter().Marshal(input)
 	if err != nil {
 		panic(err)
@@ -34,7 +50,7 @@ func ScheduleWorkflow[T any, R any](
 		scheduleToStartTimestamp = *options.ScheduleToStartTimestamp
 	}
 	executionStarted := &history.WorkflowExecutionStarted{
-		Name:                     name,
+		Name:                     workflowName,
 		Version:                  options.Version,
 		Input:                    inputBytes,
 		WorkflowID:               options.WorkflowID,

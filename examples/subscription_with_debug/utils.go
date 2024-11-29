@@ -15,11 +15,12 @@ func calculatePaymentCycles(totalAmount int64, cycles int) []int64 {
 	return paymentAmounts
 }
 
-func calculatePaymentTimings(anchor int64, cycles int, cycleDuration time.Duration) []int64 {
+func calculatePaymentTimings(anchor time.Time, cycles int, cycleDuration time.Duration) []int64 {
+	anchorMillis := anchor.UnixMilli()
 	timings := make([]int64, cycles)
 	for i := 0; i < cycles; i++ {
 		d := time.Duration(i+1) * cycleDuration
-		timings[i] = anchor + d.Milliseconds()
+		timings[i] = anchorMillis + d.Milliseconds()
 	}
 	return timings
 }
