@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -o pipefail
+set -eo pipefail
 
 go clean
 go clean -testcache
