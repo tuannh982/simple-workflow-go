@@ -7,6 +7,7 @@ import (
 )
 
 type WorkflowInfo struct {
+	WorkflowID                        string
 	Version                           string
 	WorkflowExecutionStartedTimestamp time.Time
 	CurrentTimestamp                  time.Time
@@ -16,6 +17,7 @@ type WorkflowInfo struct {
 func GetWorkflowInfo(ctx context.Context) *WorkflowInfo {
 	workflowCtx := workflow.MustExtractWorkflowExecutionContext(ctx)
 	return &WorkflowInfo{
+		WorkflowID:                        workflowCtx.WorkflowRuntime.Task.WorkflowID,
 		Version:                           workflowCtx.WorkflowRuntime.Version,
 		WorkflowExecutionStartedTimestamp: time.UnixMilli(workflowCtx.WorkflowRuntime.WorkflowExecutionStartedTimestamp),
 		CurrentTimestamp:                  time.UnixMilli(workflowCtx.WorkflowRuntime.CurrentTimestamp),
