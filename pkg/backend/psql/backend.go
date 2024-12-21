@@ -227,9 +227,13 @@ func (b *be) GetWorkflowTask(ctx context.Context) (result *task.WorkflowTask, er
 		if err != nil {
 			tx.Rollback()
 			if t != nil {
-				err = b.taskRepo.TouchTask(ctx, t.WorkflowID, t.TaskID)
-				if err != nil {
-					b.logger.Error("failed to update workflow task", zap.Error(err))
+				tErr := b.taskRepo.TouchTask(ctx, t.WorkflowID, t.TaskID)
+				if tErr != nil {
+					b.logger.Error(
+						"failed to update workflow task",
+						zap.Error(tErr),
+						zap.String("workflow_id", t.WorkflowID),
+					)
 				}
 			}
 		} else {
@@ -482,9 +486,14 @@ func (b *be) GetActivityTask(ctx context.Context) (result *task.ActivityTask, er
 		if err != nil {
 			tx.Rollback()
 			if t != nil {
-				err = b.taskRepo.TouchTask(ctx, t.WorkflowID, t.TaskID)
-				if err != nil {
-					b.logger.Error("failed to update workflow task", zap.Error(err))
+				tErr := b.taskRepo.TouchTask(ctx, t.WorkflowID, t.TaskID)
+				if tErr != nil {
+					b.logger.Error(
+						"failed to update activity task",
+						zap.Error(tErr),
+						zap.String("workflow_id", t.WorkflowID),
+						zap.String("task_id", t.TaskID),
+					)
 				}
 			}
 		} else {
