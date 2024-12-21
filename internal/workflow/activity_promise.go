@@ -5,6 +5,27 @@ import (
 	"github.com/tuannh982/simple-workflow-go/pkg/utils/promise"
 )
 
+type UntypedActivityPromise struct {
+	WorkflowRuntime *WorkflowRuntime
+	Promise         *promise.Promise[[]byte]
+}
+
+func NewUntypedActivityPromise(runtime *WorkflowRuntime) *UntypedActivityPromise {
+	p := promise.NewPromise[[]byte]()
+	return &UntypedActivityPromise{
+		WorkflowRuntime: runtime,
+		Promise:         p,
+	}
+}
+
+func (a *UntypedActivityPromise) ToTyped(activity any) *ActivityPromise {
+	return &ActivityPromise{
+		WorkflowRuntime: a.WorkflowRuntime,
+		Activity:        activity,
+		Promise:         a.Promise,
+	}
+}
+
 type ActivityPromise struct {
 	WorkflowRuntime *WorkflowRuntime
 	Activity        any

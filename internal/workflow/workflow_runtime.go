@@ -29,7 +29,7 @@ type WorkflowRuntime struct {
 	SequenceNo              int64
 	CurrentTimestamp        int64
 	ActivityScheduledEvents map[int64]*history.ActivityScheduled
-	ActivityPromises        map[int64]*ActivityPromise
+	ActivityPromises        map[int64]*UntypedActivityPromise
 	TimerCreatedEvents      map[int64]*history.TimerCreated
 	TimerPromises           map[int64]*TimerPromise
 	// start
@@ -54,7 +54,7 @@ func NewWorkflowRuntime(
 		IsReplaying:             true,
 		SequenceNo:              1, // avoid 0
 		ActivityScheduledEvents: make(map[int64]*history.ActivityScheduled),
-		ActivityPromises:        make(map[int64]*ActivityPromise),
+		ActivityPromises:        make(map[int64]*UntypedActivityPromise),
 		TimerCreatedEvents:      make(map[int64]*history.TimerCreated),
 		TimerPromises:           make(map[int64]*TimerPromise),
 	}
@@ -246,9 +246,9 @@ func (w *WorkflowRuntime) ScheduleNewActivity(activity any, input any) *Activity
 	taskScheduledID := w.nextSeqNo()
 	name := fn.GetFunctionName(activity)
 	if w.ActivityPromises[taskScheduledID] != nil {
-		return w.ActivityPromises[taskScheduledID]
+		return w.ActivityPromises[taskScheduledID].ToTyped(activity)
 	}
-	promise := NewActivityPromise(w, activity)
+	promise := NewUntypedActivityPromise(w)
 	inputBytes, err := w.DataConverter.Marshal(input)
 	if err != nil {
 		panic(err)
@@ -267,7 +267,7 @@ func (w *WorkflowRuntime) ScheduleNewActivity(activity any, input any) *Activity
 		w.ActivityScheduledEvents[taskScheduledID] = event
 	}
 	w.ActivityPromises[taskScheduledID] = promise
-	return promise
+	return promise.ToTyped(activity)
 }
 
 func (w *WorkflowRuntime) handleActivityScheduled(event *history.HistoryEvent) error {
@@ -292,8 +292,8 @@ func (w *WorkflowRuntime) handleActivityCompleted(event *history.HistoryEvent) e
 	if e := event.ActivityCompleted; e != nil {
 		promise, ok := w.ActivityPromises[e.TaskScheduledID]
 		if !ok {
-			// TODO handle duplicated event?
-			return nil
+			promise = NewUntypedActivityPromise(w)
+			w.ActivityPromises[e.TaskScheduledID] = promise
 		}
 		if e.Error != nil {
 			promise.Promise.Reject(errors.New(e.Error.Message))
@@ -351,8 +351,8 @@ func (w *WorkflowRuntime) handleTimerFired(event *history.HistoryEvent) error {
 	if e := event.TimerFired; e != nil {
 		promise, ok := w.TimerPromises[e.TimerID]
 		if !ok {
-			// TODO handle duplicated event?
-			return nil
+			promise = NewTimerPromise(w)
+			w.TimerPromises[e.TimerID] = promise
 		}
 		promise.Promise.Resolve(&struct{}{})
 		return nil
