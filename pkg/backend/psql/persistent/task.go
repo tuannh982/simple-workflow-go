@@ -38,6 +38,7 @@ type TaskRepository interface {
 	DeleteTaskUnsafe(ctx context.Context, workflowID string, taskID string, taskType task.TaskType) error
 	GetAndLockAvailableTask(ctx context.Context, taskType task.TaskType, lockedBy string, lockExpirationDuration time.Duration) (*Task, *string, error)
 	ResetTaskLastTouchTimestamp(ctx context.Context, workflowID string, taskID string) error
+	TouchTask(ctx context.Context, workflowID string, taskID string) error
 }
 
 type taskRepository struct {
@@ -157,6 +158,18 @@ func (r *taskRepository) ResetTaskLastTouchTimestamp(ctx context.Context, workfl
 	uow := r.UnitOfWork(ctx)
 	result := uow.Tx.Model(&Task{}).Where("workflow_id = ? AND task_id = ?", workflowID, taskID).Updates(map[string]interface{}{
 		"last_touch": 0,
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+func (r *taskRepository) TouchTask(ctx context.Context, workflowID string, taskID string) error {
+	uow := r.UnitOfWork(ctx)
+	now := time.Now().UnixMilli()
+	result := uow.Tx.Model(&Task{}).Where("workflow_id = ? AND task_id = ?", workflowID, taskID).Updates(map[string]interface{}{
+		"last_touch": now,
 	})
 	if result.Error != nil {
 		return result.Error

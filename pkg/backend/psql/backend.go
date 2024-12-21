@@ -221,10 +221,17 @@ func (b *be) GetWorkflowHistory(ctx context.Context, workflowID string) ([]*hist
 func (b *be) GetWorkflowTask(ctx context.Context) (result *task.WorkflowTask, err error) {
 	b.workflowTaskMu.Lock()
 	defer b.workflowTaskMu.Unlock()
+	var t *persistent.Task
 	tx := b.db.Begin()
 	defer func() {
 		if err != nil {
 			tx.Rollback()
+			if t != nil {
+				err = b.taskRepo.TouchTask(ctx, t.WorkflowID, t.TaskID)
+				if err != nil {
+					b.logger.Error("failed to update workflow task", zap.Error(err))
+				}
+			}
 		} else {
 			tx.Commit()
 		}
@@ -470,9 +477,16 @@ func (b *be) GetActivityTask(ctx context.Context) (result *task.ActivityTask, er
 	b.activityTaskMu.Lock()
 	defer b.activityTaskMu.Unlock()
 	tx := b.db.Begin()
+	var t *persistent.Task
 	defer func() {
 		if err != nil {
 			tx.Rollback()
+			if t != nil {
+				err = b.taskRepo.TouchTask(ctx, t.WorkflowID, t.TaskID)
+				if err != nil {
+					b.logger.Error("failed to update workflow task", zap.Error(err))
+				}
+			}
 		} else {
 			tx.Commit()
 		}
@@ -481,7 +495,7 @@ func (b *be) GetActivityTask(ctx context.Context) (result *task.ActivityTask, er
 	if err != nil {
 		return nil, HandleSQLError(err)
 	}
-	t, _, err := b.taskRepo.GetAndLockAvailableTask(uowCtx, task.TaskTypeActivity, b.lockedBy, b.lockExpirationDuration)
+	t, _, err = b.taskRepo.GetAndLockAvailableTask(uowCtx, task.TaskTypeActivity, b.lockedBy, b.lockExpirationDuration)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, worker.ErrNoTask
