@@ -72,7 +72,7 @@ func Test(t *testing.T) {
 	ww.Start(ctx)
 	defer ww.Stop(ctx)
 	//
-	uid, err := uuid.NewV7()
+	uid, err := uuid.NewV6()
 	assert.NoError(t, err)
 	workflowID := fmt.Sprintf("e2e-test-payment-workflow-%s", uid.String())
 	err = client.ScheduleWorkflow(ctx, be, PaymentWorkflow, &PaymentWorkflowInput{

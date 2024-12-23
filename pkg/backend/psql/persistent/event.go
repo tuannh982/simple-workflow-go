@@ -69,7 +69,7 @@ func (r *eventRepository) GetAvailableWorkflowEventsAndLock(ctx context.Context,
 		workflowID,
 		previouslyHeldBy,
 		now,
-	).Clauses().Updates(map[string]interface{}{
+	).Order("event_id").Clauses().Updates(map[string]interface{}{
 		"held_by": heldBy,
 	})
 	if result.Error != nil {

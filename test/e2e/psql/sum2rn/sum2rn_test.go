@@ -53,7 +53,7 @@ func Test(t *testing.T) {
 	var seed int64 = 12423745
 	expectedResult := GenerateNumber(seed, 19) + GenerateNumber(seed, 23)
 	//
-	uid, err := uuid.NewV7()
+	uid, err := uuid.NewV6()
 	assert.NoError(t, err)
 	workflowID := fmt.Sprintf("e2e-sum2rn-workflow-%s", uid.String())
 	err = client.ScheduleWorkflow(ctx, be, Sum2RandomNumberWorkflow, &Seed{

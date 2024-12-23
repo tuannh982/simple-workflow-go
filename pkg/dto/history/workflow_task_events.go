@@ -1,3 +1,5 @@
 package history
 
-type WorkflowTaskStarted struct{}
+type WorkflowTaskStarted struct {
+	ExecutionTimestamp int64
+}

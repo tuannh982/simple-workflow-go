@@ -52,7 +52,7 @@ func Test(t *testing.T) {
 	message := "world"
 	expectedResult := fmt.Sprintf("Hello, %s!", message)
 	//
-	uid, err := uuid.NewV7()
+	uid, err := uuid.NewV6()
 	assert.NoError(t, err)
 	workflowID := fmt.Sprintf("e2e-external-event-workflow-%s", uid.String())
 	err = client.ScheduleWorkflow(ctx, be, ExternalEventWorkflow, &Void{}, client.WorkflowScheduleOptions{

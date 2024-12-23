@@ -87,7 +87,7 @@ func (b *be) getCurrentTimestampLocal() int64 {
 }
 
 func (b *be) newUuidString() string {
-	return uuid.Must(uuid.NewV7()).String()
+	return uuid.Must(uuid.NewV6()).String()
 }
 
 func (b *be) CreateWorkflow(ctx context.Context, info *history.WorkflowExecutionStarted) error {
@@ -331,21 +331,17 @@ func (b *be) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTask
 		if _, err = b.eventRepo.DeleteEventsByWorkflowIDAndHeldBy(uowCtx, result.Task.WorkflowID, b.lockedBy); err != nil {
 			return err
 		}
-		lastSeqNo, err := b.historyEventRepo.GetLastHistorySeqNo(uowCtx, result.Task.WorkflowID)
-		if err != nil {
-			return err
-		}
 		historyEvents := make([]*persistent.HistoryEvent, len(processedEvents))
 		for i, event := range processedEvents {
-			lastSeqNo++
 			bytes, err := b.dataConverter.Marshal(event)
 			if err != nil {
 				return err
 			}
 			historyEvents[i] = &persistent.HistoryEvent{
-				WorkflowID: result.Task.WorkflowID,
-				SequenceNo: lastSeqNo,
-				Payload:    bytes,
+				WorkflowID:     result.Task.WorkflowID,
+				EventID:        b.newUuidString(),
+				EventTimestamp: event.Timestamp,
+				Payload:        bytes,
 			}
 		}
 		if err = b.historyEventRepo.InsertHistoryEvents(uowCtx, historyEvents); err != nil {

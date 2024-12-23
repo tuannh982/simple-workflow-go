@@ -7,15 +7,15 @@ import (
 )
 
 type HistoryEvent struct {
-	WorkflowID string `gorm:"column:workflow_id;type:varchar(255);primaryKey"`
-	SequenceNo int64  `gorm:"column:sequence_no;type:bigint;primaryKey"`
-	Payload    []byte `gorm:"column:payload;type:bytea"`
+	WorkflowID     string `gorm:"column:workflow_id;type:varchar(255);primaryKey"`
+	EventID        string `gorm:"column:event_id;type:uuid;primaryKey"`
+	EventTimestamp int64  `gorm:"column:event_timestamp;type:bigint"`
+	Payload        []byte `gorm:"column:payload;type:bytea"`
 }
 
 type HistoryEventRepository interface {
 	InsertHistoryEvents(ctx context.Context, events []*HistoryEvent) error
 	GetWorkflowHistory(ctx context.Context, workflowID string) ([]*HistoryEvent, error)
-	GetLastHistorySeqNo(ctx context.Context, workflowID string) (int64, error)
 }
 
 type historyEventRepository struct {
@@ -37,20 +37,6 @@ func (r *historyEventRepository) InsertHistoryEvents(ctx context.Context, events
 func (r *historyEventRepository) GetWorkflowHistory(ctx context.Context, workflowID string) ([]*HistoryEvent, error) {
 	uow := r.UnitOfWork(ctx)
 	var historyEvents []*HistoryEvent
-	result := uow.Tx.Model(&HistoryEvent{}).Where("workflow_id = ?", workflowID).Find(&historyEvents)
+	result := uow.Tx.Model(&HistoryEvent{}).Where("workflow_id = ?", workflowID).Order("event_id").Find(&historyEvents)
 	return historyEvents, result.Error
-}
-
-func (r *historyEventRepository) GetLastHistorySeqNo(ctx context.Context, workflowID string) (int64, error) {
-	uow := r.UnitOfWork(ctx)
-	var maxValue int64
-	result := uow.Tx.
-		Model(&HistoryEvent{}).
-		Where("workflow_id = ?", workflowID).
-		Select("COALESCE(MAX(sequence_no), 0)").
-		Scan(&maxValue)
-	if result.Error != nil {
-		return 0, result.Error
-	}
-	return maxValue, nil
 }

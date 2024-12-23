@@ -66,7 +66,7 @@ func Test(t *testing.T) {
 		expectedResult += GenerateNumber(int64(i))
 	}
 	//
-	uid, err := uuid.NewV7()
+	uid, err := uuid.NewV6()
 	assert.NoError(t, err)
 	workflowID := fmt.Sprintf("e2e-concurrent-task-workflow-%s", uid.String())
 	err = client.ScheduleWorkflow(ctx, be, SumWorkflow, &SumWorkflowInput{
