@@ -107,7 +107,7 @@ func AwaitWorkflowResult[T any, R any](
 	}
 }
 
-func SignalWorkflow(
+func SendWorkflowEvent(
 	ctx context.Context,
 	backend backend.Backend,
 	workflowID string,

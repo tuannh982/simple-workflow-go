@@ -12,9 +12,14 @@ type WorkflowTask struct {
 	NewEvents      []*history.HistoryEvent
 }
 
+type WorkflowTaskExecutionError struct {
+	Error error
+}
+
 type WorkflowTaskResult struct {
 	Task                       *WorkflowTask
 	PendingActivities          []*history.ActivityScheduled
 	PendingTimers              []*history.TimerCreated
 	WorkflowExecutionCompleted *history.WorkflowExecutionCompleted `json:",omitempty"`
+	ExecutionError             *WorkflowTaskExecutionError
 }

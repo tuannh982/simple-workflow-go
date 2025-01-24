@@ -58,14 +58,21 @@ func (w *workflowTaskExecutor) augmentWorkflowTaskEvents(t *task.WorkflowTask) [
 
 func (w *workflowTaskExecutor) Execute(_ context.Context, t *task.WorkflowTask) (*task.WorkflowTaskResult, error) {
 	if len(t.NewEvents) == 0 {
-		return nil, errors.New("no new events, nothing to do")
+		err := errors.New("no new events, nothing to do")
+		return &task.WorkflowTaskResult{
+			Task:           t,
+			ExecutionError: &task.WorkflowTaskExecutionError{Error: err},
+		}, err
 	}
 	t.NewEvents = w.augmentWorkflowTaskEvents(t)
 	//
 	runtime := NewWorkflowRuntime(w.workflowRegistry, w.dataConverter, t)
 	err := runtime.RunSimulation()
 	if err != nil {
-		return nil, err
+		return &task.WorkflowTaskResult{
+			Task:           t,
+			ExecutionError: &task.WorkflowTaskExecutionError{Error: err},
+		}, err
 	} else {
 		return runtime.GetWorkflowTaskResult(), nil
 	}

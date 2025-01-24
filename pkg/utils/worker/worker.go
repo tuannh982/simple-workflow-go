@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type Worker[T Summarizer, R Summarizer] interface {
+type Worker interface {
 	Start(ctx context.Context)
 	Stop(ctx context.Context)
 }
@@ -31,7 +31,7 @@ func NewWorkerOpts[T Summarizer, R Summarizer](
 	taskProcessor TaskProcessor[T, R],
 	logger *zap.Logger,
 	opts ...func(*WorkerOptions),
-) Worker[T, R] {
+) Worker {
 	options := NewWorkerOptions()
 	for _, configure := range opts {
 		configure(options)
@@ -44,7 +44,7 @@ func NewWorker[T Summarizer, R Summarizer](
 	taskProcessor TaskProcessor[T, R],
 	logger *zap.Logger,
 	options *WorkerOptions,
-) Worker[T, R] {
+) Worker {
 	return &worker[T, R]{
 		name:                         name,
 		taskProcessor:                taskProcessor,
@@ -62,7 +62,7 @@ func (w *worker[T, R]) Start(ctx context.Context) {
 	w.cancel = cancel
 	for i := 0; i < w.maxConcurrentTasks; i++ {
 		threadName := fmt.Sprintf("Thread %d", i)
-		thread := NewWorkerThread[T, R](
+		thread := NewWorkerThread(
 			threadName,
 			w.taskProcessor,
 			backoff.NewExponentialBackoff(

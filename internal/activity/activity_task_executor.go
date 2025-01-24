@@ -65,17 +65,35 @@ func (a *activityTaskExecutor) Execute(_ context.Context, t *task.ActivityTask) 
 		input := fn.InitArgument(activity)
 		err := a.dataConverter.Unmarshal(inputBytes, input)
 		if err != nil {
-			return nil, err
+			return &task.ActivityTaskResult{
+				Task: t,
+				ExecutionError: &task.ActivityTaskExecutionError{
+					Error:             err,
+					NextExecutionTime: activityExecutionCtx.NextExecutionTime(),
+				},
+			}, err
 		}
 		executionResult, err := a.executeActivity(activity, callCtx, input)
 		if err != nil {
-			return nil, err
+			return &task.ActivityTaskResult{
+				Task: t,
+				ExecutionError: &task.ActivityTaskExecutionError{
+					Error:             err,
+					NextExecutionTime: activityExecutionCtx.NextExecutionTime(),
+				},
+			}, err
 		}
 		return &task.ActivityTaskResult{
 			Task:            t,
 			ExecutionResult: executionResult,
 		}, nil
 	} else {
-		return nil, fmt.Errorf("activity %s not found", name)
+		err := fmt.Errorf("activity %s not found", name)
+		return &task.ActivityTaskResult{
+			Task: t,
+			ExecutionError: &task.ActivityTaskExecutionError{
+				Error: err,
+			},
+		}, err
 	}
 }

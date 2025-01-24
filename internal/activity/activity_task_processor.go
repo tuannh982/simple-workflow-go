@@ -5,6 +5,7 @@ import (
 	"github.com/tuannh982/simple-workflow-go/pkg/backend"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
 	"github.com/tuannh982/simple-workflow-go/pkg/utils/backoff"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/ptr"
 	"github.com/tuannh982/simple-workflow-go/pkg/utils/worker"
 	"go.uber.org/zap"
 	"time"
@@ -47,12 +48,27 @@ func (a *activityTaskProcessor) CompleteTask(ctx context.Context, result *task.A
 	return a.be.CompleteActivityTask(ctx, result)
 }
 
-func (a *activityTaskProcessor) AbandonTask(ctx context.Context, task *task.ActivityTask, reason *string) error {
-	numAttempted := task.NumAttempted
+func (a *activityTaskProcessor) getBackoffTimestamp(numAttempted int) time.Time {
 	bo := backoff.NewExponentialBackoff(a.initialBackoffInterval, a.maxBackoffInterval, a.backoffMultiplier)
 	for range numAttempted {
 		bo.Backoff()
 	}
 	backoffDuration := bo.GetBackoffDuration()
-	return a.be.AbandonActivityTask(ctx, task, reason, backoffDuration)
+	return time.Now().Add(backoffDuration)
+}
+
+func (a *activityTaskProcessor) AbandonTask(ctx context.Context, result *task.ActivityTaskResult) error {
+	var nextExecutionTime time.Time
+	var reason *string
+	if result.ExecutionError != nil {
+		if result.ExecutionError.NextExecutionTime != nil {
+			nextExecutionTime = *result.ExecutionError.NextExecutionTime
+		} else {
+			nextExecutionTime = a.getBackoffTimestamp(result.Task.NumAttempted)
+		}
+		if result.ExecutionError.Error != nil {
+			ptr.Ptr(result.ExecutionError.Error.Error())
+		}
+	}
+	return a.be.AbandonActivityTask(ctx, result.Task, reason, nextExecutionTime)
 }

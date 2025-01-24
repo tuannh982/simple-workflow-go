@@ -5,14 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"github.com/tuannh982/simple-workflow-go/pkg/utils/backoff"
-	"github.com/tuannh982/simple-workflow-go/pkg/utils/ptr"
 	"go.uber.org/zap"
 	"runtime/debug"
 	"sync"
 	"time"
 )
 
-type WorkerThread[T Summarizer, R Summarizer] struct {
+type WorkerThread interface {
+	Run(ctx context.Context)
+}
+
+type workerThread[T Summarizer, R Summarizer] struct {
 	name          string
 	taskProcessor TaskProcessor[T, R]
 	bo            backoff.Backoff
@@ -26,8 +29,8 @@ func NewWorkerThread[T Summarizer, R Summarizer](
 	bo backoff.Backoff,
 	wg *sync.WaitGroup,
 	logger *zap.Logger,
-) *WorkerThread[T, R] {
-	return &WorkerThread[T, R]{
+) WorkerThread {
+	return &workerThread[T, R]{
 		name:          name,
 		taskProcessor: taskProcessor,
 		bo:            bo,
@@ -36,7 +39,7 @@ func NewWorkerThread[T Summarizer, R Summarizer](
 	}
 }
 
-func (w *WorkerThread[T, R]) Run(ctx context.Context) {
+func (w *workerThread[T, R]) Run(ctx context.Context) {
 	w.logger.Info("WorkerThread started")
 	defer func() {
 		w.logger.Info("WorkerThread completed")
@@ -70,7 +73,7 @@ loop:
 	}
 }
 
-func (w *WorkerThread[T, R]) processTask(ctx context.Context, task T) (err error) {
+func (w *workerThread[T, R]) processTask(ctx context.Context, task T) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("panic: %v\nstack: %s", r, string(debug.Stack()))
@@ -79,7 +82,7 @@ func (w *WorkerThread[T, R]) processTask(ctx context.Context, task T) (err error
 	result, err := w.taskProcessor.ProcessTask(ctx, task)
 	if err != nil {
 		w.logger.Error("Error while processing task", zap.Error(err), zap.Any("task", task.Summary()))
-		err = w.taskProcessor.AbandonTask(ctx, task, ptr.Ptr(err.Error()))
+		err = w.taskProcessor.AbandonTask(ctx, result)
 		if err != nil {
 			if !errors.Is(err, SuppressedError) {
 				w.logger.Error("Error while abandoning task", zap.Error(err), zap.Any("task", task.Summary()))
@@ -92,7 +95,7 @@ func (w *WorkerThread[T, R]) processTask(ctx context.Context, task T) (err error
 			if !errors.Is(err, SuppressedError) {
 				w.logger.Error("Error while completing task", zap.Error(err), zap.Any("task", task.Summary()))
 			}
-			err = w.taskProcessor.AbandonTask(ctx, task, nil)
+			err = w.taskProcessor.AbandonTask(ctx, result)
 			if err != nil {
 				if !errors.Is(err, SuppressedError) {
 					w.logger.Error("Error while abandoning task", zap.Error(err), zap.Any("task", task.Summary()))
@@ -103,7 +106,7 @@ func (w *WorkerThread[T, R]) processTask(ctx context.Context, task T) (err error
 	return err
 }
 
-func (w *WorkerThread[T, R]) waitFor(ctx context.Context, duration time.Duration) bool {
+func (w *workerThread[T, R]) waitFor(ctx context.Context, duration time.Duration) bool {
 	t := time.NewTimer(duration)
 	select {
 	case <-ctx.Done():

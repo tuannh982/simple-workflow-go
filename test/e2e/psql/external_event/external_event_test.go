@@ -61,7 +61,7 @@ func Test(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	time.Sleep(1 * time.Second)
-	err = client.SignalWorkflow(ctx, be, workflowID, HelloEventName, []byte(message))
+	err = client.SendWorkflowEvent(ctx, be, workflowID, HelloEventName, []byte(message))
 	assert.NoError(t, err)
 	wResult, wErr, err := client.AwaitWorkflowResult(ctx, be, ExternalEventWorkflow, workflowID)
 	assert.NotNil(t, wResult)
