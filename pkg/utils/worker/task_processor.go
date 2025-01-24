@@ -16,5 +16,5 @@ type TaskProcessor[T Summarizer, R Summarizer] interface {
 	GetTask(ctx context.Context) (T, error)
 	ProcessTask(ctx context.Context, task T) (R, error)
 	CompleteTask(ctx context.Context, result R) error
-	AbandonTask(ctx context.Context, task T, reason *string) error
+	AbandonTask(ctx context.Context, result R) error
 }

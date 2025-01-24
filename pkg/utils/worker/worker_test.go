@@ -16,7 +16,9 @@ func (t *mockTask) Summary() any {
 	return t
 }
 
-type mockTaskResult struct{}
+type mockTaskResult struct {
+	Err error
+}
 
 func (t *mockTaskResult) Summary() any {
 	return t
@@ -26,7 +28,7 @@ type mockTaskProcessor struct {
 	numTasks int
 	process  func(ctx context.Context, task *mockTask) (*mockTaskResult, error)
 	complete func(ctx context.Context, result *mockTaskResult) error
-	abandon  func(ctx context.Context, task *mockTask, reason *string) error
+	abandon  func(ctx context.Context, result *mockTaskResult) error
 	sync.Mutex
 }
 
@@ -49,8 +51,8 @@ func (m *mockTaskProcessor) CompleteTask(ctx context.Context, result *mockTaskRe
 	return m.complete(ctx, result)
 }
 
-func (m *mockTaskProcessor) AbandonTask(ctx context.Context, task *mockTask, reason *string) error {
-	return m.abandon(ctx, task, reason)
+func (m *mockTaskProcessor) AbandonTask(ctx context.Context, result *mockTaskResult) error {
+	return m.abandon(ctx, result)
 }
 
 func TestWorkerDraining(t *testing.T) {
@@ -63,7 +65,7 @@ func TestWorkerDraining(t *testing.T) {
 		complete: func(ctx context.Context, result *mockTaskResult) error {
 			return nil
 		},
-		abandon: func(ctx context.Context, task *mockTask, reason *string) error {
+		abandon: func(ctx context.Context, result *mockTaskResult) error {
 			return nil
 		},
 	}
@@ -83,8 +85,8 @@ func TestProcessError(t *testing.T) {
 		complete: func(ctx context.Context, result *mockTaskResult) error {
 			return nil
 		},
-		abandon: func(ctx context.Context, task *mockTask, reason *string) error {
-			fmt.Printf("%v\n", *reason)
+		abandon: func(ctx context.Context, result *mockTaskResult) error {
+			fmt.Printf("%v\n", result.Err)
 			return nil
 		},
 	}
@@ -104,7 +106,7 @@ func TestPanicProcessor(t *testing.T) {
 		complete: func(ctx context.Context, result *mockTaskResult) error {
 			panic("panicked")
 		},
-		abandon: func(ctx context.Context, task *mockTask, reason *string) error {
+		abandon: func(ctx context.Context, result *mockTaskResult) error {
 			panic("panicked")
 		},
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/ptr"
 	"github.com/tuannh982/simple-workflow-go/pkg/utils/worker"
 	"go.uber.org/zap"
 )
@@ -38,6 +39,10 @@ func (w *workflowTaskProcessor) CompleteTask(ctx context.Context, result *task.W
 	return w.be.CompleteWorkflowTask(ctx, result)
 }
 
-func (w *workflowTaskProcessor) AbandonTask(ctx context.Context, task *task.WorkflowTask, reason *string) error {
-	return w.be.AbandonWorkflowTask(ctx, task, reason)
+func (w *workflowTaskProcessor) AbandonTask(ctx context.Context, result *task.WorkflowTaskResult) error {
+	var reason *string
+	if result.ExecutionError != nil {
+		reason = ptr.Ptr(result.ExecutionError.Error.Error())
+	}
+	return w.be.AbandonWorkflowTask(ctx, result.Task, reason)
 }

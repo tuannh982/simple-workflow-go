@@ -20,5 +20,5 @@ type Backend interface {
 	AbandonWorkflowTask(ctx context.Context, task *task.WorkflowTask, reason *string) error
 	GetActivityTask(ctx context.Context) (*task.ActivityTask, error)
 	CompleteActivityTask(ctx context.Context, result *task.ActivityTaskResult) error
-	AbandonActivityTask(ctx context.Context, task *task.ActivityTask, reason *string, backoffDuration time.Duration) error
+	AbandonActivityTask(ctx context.Context, task *task.ActivityTask, reason *string, nextExecutionTime time.Time) error
 }

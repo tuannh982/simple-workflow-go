@@ -15,7 +15,7 @@ import (
 type WorkflowWorker struct {
 	name      string
 	processor worker.TaskProcessor[*task.WorkflowTask, *task.WorkflowTaskResult]
-	w         worker.Worker[*task.WorkflowTask, *task.WorkflowTaskResult]
+	w         worker.Worker
 	logger    *zap.Logger
 }
 
