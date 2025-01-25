@@ -69,11 +69,12 @@ func GetWorkflowResult[T any, R any](
 	return backend.GetWorkflowResult(ctx, name, workflowID)
 }
 
-func AwaitWorkflowResult[T any, R any](
+func AwaitWorkflow[T any, R any](
 	ctx context.Context,
 	backend backend.Backend,
 	workflow types.Workflow[T, R],
 	workflowID string,
+	stopCondition func(result *dto.WorkflowExecutionResult) bool,
 ) (*R, error, error) {
 	name := fn.GetFunctionName(workflow)
 	ticker := time.NewTicker(500 * time.Millisecond)
@@ -87,7 +88,7 @@ func AwaitWorkflowResult[T any, R any](
 			if err != nil {
 				return nil, nil, err
 			}
-			if result.RuntimeStatus == string(dto.WorkflowRuntimeStatusCompleted) {
+			if stopCondition(result) {
 				var wResult *R
 				var wError error
 				if result.Result != nil {
@@ -105,6 +106,17 @@ func AwaitWorkflowResult[T any, R any](
 			}
 		}
 	}
+}
+
+func AwaitWorkflowResult[T any, R any](
+	ctx context.Context,
+	backend backend.Backend,
+	workflow types.Workflow[T, R],
+	workflowID string,
+) (*R, error, error) {
+	return AwaitWorkflow(ctx, backend, workflow, workflowID, func(result *dto.WorkflowExecutionResult) bool {
+		return result.RuntimeStatus == string(dto.WorkflowRuntimeStatusCompleted)
+	})
 }
 
 func SendWorkflowEvent(
