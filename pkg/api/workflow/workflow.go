@@ -49,3 +49,9 @@ func OnEvent(ctx context.Context, eventName string, callback func([]byte)) {
 	}
 	workflowCtx.EventCallbacks[eventName] = append(workflowCtx.EventCallbacks[eventName], callback)
 }
+
+func AwaitEvent(ctx context.Context, eventName string) ([]byte, error) {
+	workflowCtx := workflow.MustExtractWorkflowExecutionContext(ctx)
+	promise := workflowCtx.WorkflowRuntime.NewEventPromise(eventName)
+	return promise.Await()
+}

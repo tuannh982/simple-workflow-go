@@ -1,7 +1,7 @@
 //go:build e2e
 // +build e2e
 
-package external_event
+package handle_external_event
 
 import (
 	"context"
@@ -40,7 +40,7 @@ func Test(t *testing.T) {
 		WithBackend(be).
 		WithLogger(logger).
 		RegisterWorkflows(
-			ExternalEventWorkflow,
+			HandleExternalEventWorkflow,
 		).
 		Build()
 	assert.NoError(t, err)
@@ -55,7 +55,7 @@ func Test(t *testing.T) {
 	uid, err := uuid.NewV6()
 	assert.NoError(t, err)
 	workflowID := fmt.Sprintf("e2e-external-event-workflow-%s", uid.String())
-	err = client.ScheduleWorkflow(ctx, be, ExternalEventWorkflow, &Void{}, client.WorkflowScheduleOptions{
+	err = client.ScheduleWorkflow(ctx, be, HandleExternalEventWorkflow, &Void{}, client.WorkflowScheduleOptions{
 		WorkflowID: workflowID,
 		Version:    "1",
 	})
@@ -63,7 +63,7 @@ func Test(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	err = client.SendWorkflowEvent(ctx, be, workflowID, HelloEventName, []byte(message))
 	assert.NoError(t, err)
-	wResult, wErr, err := client.AwaitWorkflowResult(ctx, be, ExternalEventWorkflow, workflowID)
+	wResult, wErr, err := client.AwaitWorkflowResult(ctx, be, HandleExternalEventWorkflow, workflowID)
 	assert.NotNil(t, wResult)
 	assert.NoError(t, wErr)
 	//goland:noinspection GoDfaErrorMayBeNotNil
