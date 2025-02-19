@@ -1,13 +1,12 @@
 //go:build e2e
 // +build e2e
 
-package external_event
+package await_external_event
 
 import (
 	"context"
 	"fmt"
 	"github.com/tuannh982/simple-workflow-go/pkg/api/workflow"
-	"time"
 )
 
 type Void struct{}
@@ -24,13 +23,12 @@ func Activity1(ctx context.Context, input *String) (*String, error) {
 
 const HelloEventName = "hello"
 
-func ExternalEventWorkflow(ctx context.Context, _ *Void) (*String, error) {
-	message := ""
-	workflow.OnEvent(ctx, HelloEventName, func(bytes []byte) {
-		message = string(bytes)
-	})
-	workflow.WaitFor(ctx, 3*time.Second)
-	activity1Result, err := workflow.CallActivity(ctx, Activity1, &String{Value: message}).Await()
+func AwaitExternalEventWorkflow(ctx context.Context, _ *Void) (*String, error) {
+	message, err := workflow.AwaitEvent(ctx, HelloEventName)
+	if err != nil {
+		return nil, err
+	}
+	activity1Result, err := workflow.CallActivity(ctx, Activity1, &String{Value: string(message)}).Await()
 	if err != nil {
 		return nil, err
 	}

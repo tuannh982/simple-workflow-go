@@ -1,7 +1,7 @@
 services:
   postgres:
     image: 'bitnami/postgresql:latest'
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRESQL_USERNAME: "user"
       POSTGRESQL_PASSWORD: "123456"

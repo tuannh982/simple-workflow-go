@@ -32,6 +32,7 @@ type WorkflowRuntime struct {
 	ActivityPromises        map[int64]*UntypedActivityPromise
 	TimerCreatedEvents      map[int64]*history.TimerCreated
 	TimerPromises           map[int64]*TimerPromise
+	EventPromises           map[string]map[int64]*EventPromise
 	// start
 	WorkflowExecutionStartedTimestamp int64
 	WorkflowExecutionStartedEvent     *history.WorkflowExecutionStarted
@@ -57,6 +58,7 @@ func NewWorkflowRuntime(
 		ActivityPromises:        make(map[int64]*UntypedActivityPromise),
 		TimerCreatedEvents:      make(map[int64]*history.TimerCreated),
 		TimerPromises:           make(map[int64]*TimerPromise),
+		EventPromises:           make(map[string]map[int64]*EventPromise),
 	}
 }
 
@@ -361,8 +363,35 @@ func (w *WorkflowRuntime) handleTimerFired(event *history.HistoryEvent) error {
 	}
 }
 
+/*
+	Event
+*/
+
+func (w *WorkflowRuntime) NewEventPromise(eventName string) *EventPromise {
+	taskScheduledID := w.nextSeqNo()
+	if w.EventPromises[eventName] != nil && w.EventPromises[eventName][taskScheduledID] != nil {
+		return w.EventPromises[eventName][taskScheduledID]
+	}
+	promise := NewEventPromise(w, eventName)
+	if w.EventPromises[eventName] == nil {
+		w.EventPromises[eventName] = make(map[int64]*EventPromise)
+	}
+	w.EventPromises[eventName][taskScheduledID] = promise
+	return promise
+}
+
 func (w *WorkflowRuntime) handleExternalEventReceived(event *history.HistoryEvent) error {
 	if e := event.ExternalEventReceived; e != nil {
+		// handle event promises
+		eventName := e.EventName
+		if w.EventPromises[eventName] != nil {
+			promises := w.EventPromises[eventName]
+			for _, promise := range promises {
+				promise.Promise.Resolve(&e.Input)
+			}
+			delete(w.EventPromises, eventName)
+		}
+		// handle callbacks
 		callbackRegistry := w.WorkflowExecutionContext.EventCallbacks
 		if callbacks, ok := callbackRegistry[e.EventName]; ok {
 			for _, callback := range callbacks {
