@@ -3,6 +3,7 @@ package persistent
 import (
 	"context"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend/psql/persistent/base"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/clock"
 	"gorm.io/gorm"
 )
 
@@ -20,11 +21,13 @@ type HistoryEventRepository interface {
 
 type historyEventRepository struct {
 	base.BaseRepository
+	clock clock.Clock
 }
 
-func NewHistoryEventRepository(db *gorm.DB) HistoryEventRepository {
+func NewHistoryEventRepository(db *gorm.DB, clock clock.Clock) HistoryEventRepository {
 	return &historyEventRepository{
 		BaseRepository: base.BaseRepository{DB: db},
+		clock:          clock,
 	}
 }
 

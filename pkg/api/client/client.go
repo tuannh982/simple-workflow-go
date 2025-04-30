@@ -45,7 +45,7 @@ func ScheduleWorkflowUnsafe(
 	if err != nil {
 		panic(err)
 	}
-	scheduleToStartTimestamp := time.Now().UnixMilli()
+	scheduleToStartTimestamp := backend.Clock().Now().UnixMilli()
 	if options.ScheduleToStartTimestamp != nil {
 		scheduleToStartTimestamp = *options.ScheduleToStartTimestamp
 	}

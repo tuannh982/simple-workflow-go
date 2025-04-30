@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend/psql/persistent/base"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/clock"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"time"
@@ -43,11 +44,13 @@ type TaskRepository interface {
 
 type taskRepository struct {
 	base.BaseRepository
+	clock clock.Clock
 }
 
-func NewTaskRepository(db *gorm.DB) TaskRepository {
+func NewTaskRepository(db *gorm.DB, clock clock.Clock) TaskRepository {
 	return &taskRepository{
 		BaseRepository: base.BaseRepository{DB: db},
+		clock:          clock,
 	}
 }
 
@@ -73,7 +76,7 @@ func (r *taskRepository) InsertTasks(ctx context.Context, task []*Task) error {
 func (r *taskRepository) ReleaseTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string, reason *string, nextScheduleTimestamp *int64) error {
 	uow := r.UnitOfWork(ctx)
 	updates := map[string]interface{}{
-		"last_touch":     time.Now().UnixMilli(),
+		"last_touch":     r.clock.Now().UnixMilli(),
 		"num_attempted":  gorm.Expr("num_attempted + 1"),
 		"release_reason": reason,
 		"locked_by":      nil,
@@ -126,7 +129,7 @@ func (r *taskRepository) DeleteTaskUnsafe(ctx context.Context, workflowID string
 
 func (r *taskRepository) GetAndLockAvailableTask(ctx context.Context, taskType task.TaskType, lockedBy string, lockExpirationDuration time.Duration) (*Task, *string, error) {
 	uow := r.UnitOfWork(ctx)
-	now := time.Now().UnixMilli()
+	now := r.clock.Now().UnixMilli()
 	t := &Task{}
 	result := uow.Tx.
 		Model(&Task{}).
@@ -167,7 +170,7 @@ func (r *taskRepository) ResetTaskLastTouchTimestamp(ctx context.Context, workfl
 
 func (r *taskRepository) TouchTask(ctx context.Context, workflowID string, taskID string) error {
 	uow := r.UnitOfWork(ctx)
-	now := time.Now().UnixMilli()
+	now := r.clock.Now().UnixMilli()
 	result := uow.Tx.Model(&Task{}).Where("workflow_id = ? AND task_id = ?", workflowID, taskID).Updates(map[string]interface{}{
 		"last_touch": now,
 	})

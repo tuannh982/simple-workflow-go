@@ -54,7 +54,7 @@ func (a *activityTaskProcessor) getBackoffTimestamp(numAttempted int) time.Time 
 		bo.Backoff()
 	}
 	backoffDuration := bo.GetBackoffDuration()
-	return time.Now().Add(backoffDuration)
+	return a.be.Clock().Now().Add(backoffDuration)
 }
 
 func (a *activityTaskProcessor) AbandonTask(ctx context.Context, result *task.ActivityTaskResult) error {

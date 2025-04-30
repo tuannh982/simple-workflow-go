@@ -33,7 +33,7 @@ func NewActivityWorker(
 	}
 	fqn := fmt.Sprintf("Activity worker %s", name)
 	childLogger := logger.With(zap.String("worker", name))
-	executor := activity.NewActivityTaskExecutor(registry, dataConverter, childLogger)
+	executor := activity.NewActivityTaskExecutor(be, registry, dataConverter, childLogger)
 	processor := activity.NewActivityTaskProcessor(be, executor, childLogger, options.ActivityTaskProcessorOptions)
 	w := worker.NewWorker(fqn, processor, childLogger, options.WorkerOptions)
 	return &ActivityWorker{

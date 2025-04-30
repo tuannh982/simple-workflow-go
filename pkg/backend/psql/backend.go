@@ -13,6 +13,7 @@ import (
 	"github.com/tuannh982/simple-workflow-go/pkg/dto"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/history"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/clock"
 	"github.com/tuannh982/simple-workflow-go/pkg/utils/ptr"
 	"github.com/tuannh982/simple-workflow-go/pkg/utils/worker"
 	"go.uber.org/zap"
@@ -22,6 +23,7 @@ import (
 )
 
 type be struct {
+	clock                  clock.Clock
 	lockedBy               string
 	lockExpirationDuration time.Duration
 	dataConverter          dataconverter.DataConverter
@@ -42,11 +44,30 @@ func NewPSQLBackend(
 	db *gorm.DB,
 	logger *zap.Logger,
 ) backend.Backend {
+	return NewPSQLBackendWithClock(
+		clock.NewRealClock(),
+		lockedBy,
+		lockExpirationDuration,
+		dataConverter,
+		db,
+		logger,
+	)
+}
+
+func NewPSQLBackendWithClock(
+	clock clock.Clock,
+	lockedBy string,
+	lockExpirationDuration time.Duration,
+	dataConverter dataconverter.DataConverter,
+	db *gorm.DB,
+	logger *zap.Logger,
+) backend.Backend {
 	workflowRepo := persistent.NewWorkflowRepository(db)
 	historyEventRepo := persistent.NewHistoryEventRepository(db)
 	taskRepo := persistent.NewTaskRepository(db)
 	eventRepo := persistent.NewEventRepository(db)
 	return &be{
+		clock:                  clock,
 		lockedBy:               lockedBy,
 		lockExpirationDuration: lockExpirationDuration,
 		dataConverter:          dataConverter,
@@ -61,15 +82,12 @@ func NewPSQLBackend(
 	}
 }
 
-func (b *be) DataConverter() dataconverter.DataConverter {
-	return b.dataConverter
+func (b *be) Clock() clock.Clock {
+	return b.clock
 }
 
-func (b *be) getCurrentTimestamp(tx *gorm.DB) int64 {
-	type tsHolder struct{ timestamp int64 }
-	ts := &tsHolder{}
-	tx.Raw("SELECT CAST(EXTRACT(EPOCH FROM NOW()::timestamp) * 1000 AS BIGINT) timestamp;").Scan(ts)
-	return ts.timestamp
+func (b *be) DataConverter() dataconverter.DataConverter {
+	return b.dataConverter
 }
 
 func (b *be) createUow(ctx context.Context, tx *gorm.DB) (context.Context, error) {
@@ -83,7 +101,7 @@ func (b *be) createUow(ctx context.Context, tx *gorm.DB) (context.Context, error
 }
 
 func (b *be) getCurrentTimestampLocal() int64 {
-	return time.Now().UnixMilli()
+	return b.clock.Now().UnixMilli()
 }
 
 func (b *be) newUuidString() string {

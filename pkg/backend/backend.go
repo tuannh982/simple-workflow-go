@@ -6,10 +6,12 @@ import (
 	"github.com/tuannh982/simple-workflow-go/pkg/dto"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/history"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/clock"
 	"time"
 )
 
 type Backend interface {
+	Clock() clock.Clock
 	DataConverter() dataconverter.DataConverter
 	CreateWorkflow(ctx context.Context, info *history.WorkflowExecutionStarted) error
 	GetWorkflowResult(ctx context.Context, name string, workflowID string) (*dto.WorkflowExecutionResult, error)

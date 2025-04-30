@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/tuannh982/simple-workflow-go/internal/fn"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend"
 	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
@@ -17,17 +18,20 @@ type ActivityTaskExecutor interface {
 }
 
 type activityTaskExecutor struct {
+	be               backend.Backend
 	activityRegistry *registry.ActivityRegistry
 	dataConverter    dataconverter.DataConverter
 	logger           *zap.Logger
 }
 
 func NewActivityTaskExecutor(
+	be backend.Backend,
 	activityRegistry *registry.ActivityRegistry,
 	dataConverter dataconverter.DataConverter,
 	logger *zap.Logger,
 ) ActivityTaskExecutor {
 	return &activityTaskExecutor{
+		be:               be,
 		activityRegistry: activityRegistry,
 		dataConverter:    dataConverter,
 		logger:           logger,
@@ -69,7 +73,7 @@ func (a *activityTaskExecutor) Execute(_ context.Context, t *task.ActivityTask) 
 				Task: t,
 				ExecutionError: &task.ActivityTaskExecutionError{
 					Error:             err,
-					NextExecutionTime: activityExecutionCtx.NextExecutionTime(),
+					NextExecutionTime: activityExecutionCtx.NextExecutionTime(a.be.Clock()),
 				},
 			}, err
 		}
@@ -79,7 +83,7 @@ func (a *activityTaskExecutor) Execute(_ context.Context, t *task.ActivityTask) 
 				Task: t,
 				ExecutionError: &task.ActivityTaskExecutionError{
 					Error:             err,
-					NextExecutionTime: activityExecutionCtx.NextExecutionTime(),
+					NextExecutionTime: activityExecutionCtx.NextExecutionTime(a.be.Clock()),
 				},
 			}, err
 		}

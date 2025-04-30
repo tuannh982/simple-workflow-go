@@ -2,6 +2,7 @@ package activity
 
 import (
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/clock"
 	"time"
 )
 
@@ -19,11 +20,11 @@ func NewActivityExecutionContext(
 	}
 }
 
-func (ctx *ActivityExecutionContext) NextExecutionTime() *time.Time {
+func (ctx *ActivityExecutionContext) NextExecutionTime(clock clock.Clock) *time.Time {
 	if ctx.UserDefinedNextExecutionTime != nil {
 		return ctx.UserDefinedNextExecutionTime
 	} else if ctx.UserDefinedBackoffDuration != nil {
-		t := time.Now()
+		t := clock.Now()
 		t = t.Add(*ctx.UserDefinedBackoffDuration)
 		return &t
 	} else {

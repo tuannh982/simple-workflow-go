@@ -3,8 +3,8 @@ package persistent
 import (
 	"context"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend/psql/persistent/base"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/clock"
 	"gorm.io/gorm"
-	"time"
 )
 
 type Event struct {
@@ -26,11 +26,13 @@ type EventRepository interface {
 
 type eventRepository struct {
 	base.BaseRepository
+	clock clock.Clock
 }
 
-func NewEventRepository(db *gorm.DB) EventRepository {
+func NewEventRepository(db *gorm.DB, clock clock.Clock) EventRepository {
 	return &eventRepository{
 		BaseRepository: base.BaseRepository{DB: db},
+		clock:          clock,
 	}
 }
 
@@ -63,7 +65,7 @@ func (r *eventRepository) ReleaseEventsByWorkflowIDAndHeldBy(ctx context.Context
 
 func (r *eventRepository) GetAvailableWorkflowEventsAndLock(ctx context.Context, workflowID string, heldBy string, previouslyHeldBy *string) ([]*Event, error) {
 	uow := r.UnitOfWork(ctx)
-	now := time.Now().UnixMilli()
+	now := r.clock.Now().UnixMilli()
 	result := uow.Tx.Model(&Event{}).Where(
 		"workflow_id = ? AND (held_by IS NULL OR held_by = ?) AND visible_at < ?",
 		workflowID,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend/psql/persistent/base"
+	"github.com/tuannh982/simple-workflow-go/pkg/utils/clock"
 	"gorm.io/gorm"
 )
 
@@ -31,11 +32,13 @@ type WorkflowRepository interface {
 
 type workflowRepository struct {
 	base.BaseRepository
+	clock clock.Clock
 }
 
-func NewWorkflowRepository(db *gorm.DB) WorkflowRepository {
+func NewWorkflowRepository(db *gorm.DB, clock clock.Clock) WorkflowRepository {
 	return &workflowRepository{
 		BaseRepository: base.BaseRepository{DB: db},
+		clock:          clock,
 	}
 }
 
