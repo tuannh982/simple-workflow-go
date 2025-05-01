@@ -2,6 +2,7 @@ package activity
 
 import (
 	"context"
+	"errors"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
 	"github.com/tuannh982/simple-workflow-go/pkg/utils/backoff"
@@ -58,17 +59,19 @@ func (a *activityTaskProcessor) getBackoffTimestamp(numAttempted int) time.Time 
 }
 
 func (a *activityTaskProcessor) AbandonTask(ctx context.Context, result *task.ActivityTaskResult) error {
+	if result.ExecutionError == nil {
+		return errors.New("execution error must not be nil")
+	}
+	executionError := *result.ExecutionError
 	var nextExecutionTime time.Time
 	var reason *string
-	if result.ExecutionError != nil {
-		if result.ExecutionError.NextExecutionTime != nil {
-			nextExecutionTime = *result.ExecutionError.NextExecutionTime
-		} else {
-			nextExecutionTime = a.getBackoffTimestamp(result.Task.NumAttempted)
-		}
-		if result.ExecutionError.Error != nil {
-			ptr.Ptr(result.ExecutionError.Error.Error())
-		}
+	if executionError.NextExecutionTime != nil {
+		nextExecutionTime = *executionError.NextExecutionTime
+	} else {
+		nextExecutionTime = a.getBackoffTimestamp(result.Task.NumAttempted)
 	}
-	return a.be.AbandonActivityTask(ctx, result.Task, reason, nextExecutionTime)
+	if executionError.Error != nil {
+		reason = ptr.Ptr(executionError.Error.Error())
+	}
+	return a.be.AbandonActivityTask(ctx, result.Task, reason, nextExecutionTime, result.UpdatedStateData)
 }

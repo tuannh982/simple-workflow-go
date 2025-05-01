@@ -299,7 +299,7 @@ func (b *be) CompleteWorkflowTask(ctx context.Context, result *task.WorkflowTask
 			return err
 		}
 		currentTimestampUTC := b.getCurrentTimestampLocal()
-		if err = b.taskRepo.ReleaseTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID, task.TaskTypeWorkflow, b.lockedBy, nil, nil); err != nil {
+		if err = b.taskRepo.ReleaseTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID, task.TaskTypeWorkflow, b.lockedBy, nil, nil, nil); err != nil {
 			return err
 		}
 		isCompleted := false
@@ -460,7 +460,7 @@ func (b *be) AbandonWorkflowTask(ctx context.Context, t *task.WorkflowTask, reas
 		if err != nil {
 			return err
 		}
-		err = b.taskRepo.ReleaseTask(uowCtx, t.WorkflowID, t.TaskID, task.TaskTypeWorkflow, b.lockedBy, reason, nil)
+		err = b.taskRepo.ReleaseTask(uowCtx, t.WorkflowID, t.TaskID, task.TaskTypeWorkflow, b.lockedBy, reason, nil, nil)
 		if err != nil {
 			return err
 		}
@@ -516,6 +516,8 @@ func (b *be) GetActivityTask(ctx context.Context) (result *task.ActivityTask, er
 	return &task.ActivityTask{
 		TaskID:            t.TaskID,
 		WorkflowID:        t.WorkflowID,
+		NumAttempted:      int(t.NumAttempted),
+		StateData:         t.StateData,
 		TaskScheduleEvent: activityScheduled,
 	}, nil
 }
@@ -535,8 +537,9 @@ func (b *be) CompleteActivityTask(ctx context.Context, result *task.ActivityTask
 		he := &history.HistoryEvent{
 			Timestamp: currentTimestampUTC,
 			ActivityCompleted: &history.ActivityCompleted{
-				TaskScheduledID: result.Task.TaskScheduleEvent.TaskScheduledID,
-				ExecutionResult: *result.ExecutionResult,
+				TaskScheduledID:   result.Task.TaskScheduleEvent.TaskScheduledID,
+				ExecutionResult:   *result.ExecutionResult,
+				ActivityStateData: result.GetStateData(),
 			},
 		}
 		bytes, err := b.dataConverter.Marshal(he)
@@ -564,7 +567,7 @@ func (b *be) CompleteActivityTask(ctx context.Context, result *task.ActivityTask
 	return HandleSQLError(err)
 }
 
-func (b *be) AbandonActivityTask(ctx context.Context, t *task.ActivityTask, reason *string, nextExecutionTime time.Time) error {
+func (b *be) AbandonActivityTask(ctx context.Context, t *task.ActivityTask, reason *string, nextExecutionTime time.Time, stateData []byte) error {
 	b.activityTaskMu.Lock()
 	defer b.activityTaskMu.Unlock()
 	err := b.db.Transaction(func(tx *gorm.DB) error {
@@ -578,7 +581,7 @@ func (b *be) AbandonActivityTask(ctx context.Context, t *task.ActivityTask, reas
 		if nextExecutionTimeUTC > currentTimestampUTC {
 			nextScheduleTimestamp = nextExecutionTimeUTC
 		}
-		return b.taskRepo.ReleaseTask(uowCtx, t.WorkflowID, t.TaskID, task.TaskTypeActivity, b.lockedBy, reason, &nextScheduleTimestamp)
+		return b.taskRepo.ReleaseTask(uowCtx, t.WorkflowID, t.TaskID, task.TaskTypeActivity, b.lockedBy, reason, &nextScheduleTimestamp, stateData)
 	})
 	return HandleSQLError(err)
 }

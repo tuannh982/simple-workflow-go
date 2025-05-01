@@ -13,4 +13,5 @@ type ActivityScheduled struct {
 type ActivityCompleted struct {
 	TaskScheduledID int64
 	dto.ExecutionResult
+	ActivityStateData []byte
 }

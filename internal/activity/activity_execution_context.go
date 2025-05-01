@@ -9,6 +9,7 @@ type ActivityExecutionContext struct {
 	Task                         *task.ActivityTask
 	UserDefinedNextExecutionTime *time.Time
 	UserDefinedBackoffDuration   *time.Duration
+	UpdatedStateData             []byte
 }
 
 func NewActivityExecutionContext(
@@ -28,5 +29,13 @@ func (ctx *ActivityExecutionContext) NextExecutionTime() *time.Time {
 		return &t
 	} else {
 		return nil
+	}
+}
+
+func (ctx *ActivityExecutionContext) GetStateData() []byte {
+	if ctx.UpdatedStateData != nil {
+		return ctx.UpdatedStateData
+	} else {
+		return ctx.Task.StateData
 	}
 }

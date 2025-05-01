@@ -26,6 +26,7 @@ type Task struct {
 	VisibleAt     int64   `gorm:"column:visible_at;type:bigint;index:idx_task_type_locked_by_visible_at"`
 	LastTouch     int64   `gorm:"column:last_touch;type:bigint"`
 	Payload       []byte  `gorm:"column:payload;type:bytea"`
+	StateData     []byte  `gorm:"column:state_data;type:bytea"`
 	ReleaseReason *string `gorm:"column:release_reason;type:text"`
 }
 
@@ -33,7 +34,7 @@ type TaskRepository interface {
 	InsertTask(ctx context.Context, task *Task) error
 	GetTask(ctx context.Context, workflowID string, taskID string) (*Task, error)
 	InsertTasks(ctx context.Context, tasks []*Task) error
-	ReleaseTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string, reason *string, nextScheduleTimestamp *int64) error
+	ReleaseTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string, reason *string, nextScheduleTimestamp *int64, stateData []byte) error
 	DeleteTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string) error
 	DeleteTaskUnsafe(ctx context.Context, workflowID string, taskID string, taskType task.TaskType) error
 	GetAndLockAvailableTask(ctx context.Context, taskType task.TaskType, lockedBy string, lockExpirationDuration time.Duration) (*Task, *string, error)
@@ -70,7 +71,7 @@ func (r *taskRepository) InsertTasks(ctx context.Context, task []*Task) error {
 	return result.Error
 }
 
-func (r *taskRepository) ReleaseTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string, reason *string, nextScheduleTimestamp *int64) error {
+func (r *taskRepository) ReleaseTask(ctx context.Context, workflowID string, taskID string, taskType task.TaskType, lockedBy string, reason *string, nextScheduleTimestamp *int64, stateData []byte) error {
 	uow := r.UnitOfWork(ctx)
 	updates := map[string]interface{}{
 		"last_touch":     time.Now().UnixMilli(),
@@ -80,6 +81,9 @@ func (r *taskRepository) ReleaseTask(ctx context.Context, workflowID string, tas
 	}
 	if nextScheduleTimestamp != nil {
 		updates["visible_at"] = *nextScheduleTimestamp
+	}
+	if stateData != nil {
+		updates["state_data"] = stateData
 	}
 	result := uow.Tx.Model(&Task{}).Where(
 		"workflow_id = ? AND task_id = ? AND task_type = ? AND locked_by = ?",
