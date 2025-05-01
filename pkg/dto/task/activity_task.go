@@ -10,6 +10,7 @@ type ActivityTask struct {
 	TaskID            string
 	WorkflowID        string
 	NumAttempted      int
+	StateData         []byte
 	TaskScheduleEvent *history.ActivityScheduled
 }
 
@@ -19,7 +20,16 @@ type ActivityTaskExecutionError struct {
 }
 
 type ActivityTaskResult struct {
-	Task            *ActivityTask
-	ExecutionResult *dto.ExecutionResult
-	ExecutionError  *ActivityTaskExecutionError
+	Task             *ActivityTask
+	UpdatedStateData []byte
+	ExecutionResult  *dto.ExecutionResult
+	ExecutionError   *ActivityTaskExecutionError
+}
+
+func (r *ActivityTaskResult) GetStateData() []byte {
+	if r.UpdatedStateData != nil {
+		return r.UpdatedStateData
+	} else {
+		return r.Task.StateData
+	}
 }

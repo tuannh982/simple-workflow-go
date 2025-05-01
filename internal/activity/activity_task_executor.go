@@ -71,6 +71,7 @@ func (a *activityTaskExecutor) Execute(_ context.Context, t *task.ActivityTask) 
 					Error:             err,
 					NextExecutionTime: activityExecutionCtx.NextExecutionTime(),
 				},
+				UpdatedStateData: activityExecutionCtx.UpdatedStateData,
 			}, err
 		}
 		executionResult, err := a.executeActivity(activity, callCtx, input)
@@ -81,11 +82,13 @@ func (a *activityTaskExecutor) Execute(_ context.Context, t *task.ActivityTask) 
 					Error:             err,
 					NextExecutionTime: activityExecutionCtx.NextExecutionTime(),
 				},
+				UpdatedStateData: activityExecutionCtx.UpdatedStateData,
 			}, err
 		}
 		return &task.ActivityTaskResult{
-			Task:            t,
-			ExecutionResult: executionResult,
+			Task:             t,
+			ExecutionResult:  executionResult,
+			UpdatedStateData: activityExecutionCtx.UpdatedStateData,
 		}, nil
 	} else {
 		err := fmt.Errorf("activity %s not found", name)
