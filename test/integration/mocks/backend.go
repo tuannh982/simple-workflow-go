@@ -19,13 +19,13 @@ import (
 )
 
 type mockBackend struct {
-	dataConverter  dataconverter.DataConverter
+	dataConverter  dataconverter.Codec
 	persistent     *MockPersistent
 	thisInstanceID string
 	*sync.Mutex
 }
 
-func NewMockBackend(dataConverter dataconverter.DataConverter) backend.Backend {
+func NewMockBackend(dataConverter dataconverter.Codec) backend.Backend {
 	hostname, err := os.Hostname()
 	if err != nil {
 		panic(err)
@@ -40,7 +40,7 @@ func NewMockBackend(dataConverter dataconverter.DataConverter) backend.Backend {
 	}
 }
 
-func (m *mockBackend) DataConverter() dataconverter.DataConverter {
+func (m *mockBackend) DataConverter() dataconverter.Codec {
 	return m.dataConverter
 }
 

@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"flag"
+
 	"github.com/tuannh982/simple-workflow-go/examples"
 	"github.com/tuannh982/simple-workflow-go/examples/sum2rn"
 	"github.com/tuannh982/simple-workflow-go/pkg/api/client"
+	"github.com/tuannh982/simple-workflow-go/pkg/api/debug"
 	"go.uber.org/zap"
 )
 
@@ -17,7 +19,7 @@ var (
 
 func init() {
 	flag.StringVar(&workflowID, "workflowID", "default-workflow-id", "workflowID")
-	flag.StringVar(&mode, "mode", "schedule", "schedule|await")
+	flag.StringVar(&mode, "mode", "schedule", "schedule|await|debug")
 	flag.Int64Var(&seed, "seed", 100, "seed")
 	flag.Parse()
 }
@@ -49,5 +51,12 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+	} else if mode == "debug" {
+		dbg := debug.NewWorkflowDebugger(be)
+		vars, err := dbg.QueryUserDefinedVars(sum2rn.Sum2RandomNumberWorkflow, workflowID)
+		if err != nil {
+			panic(err)
+		}
+		examples.PrettyPrint(vars)
 	}
 }

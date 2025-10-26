@@ -18,13 +18,13 @@ type ActivityTaskExecutor interface {
 
 type activityTaskExecutor struct {
 	activityRegistry *registry.ActivityRegistry
-	dataConverter    dataconverter.DataConverter
+	dataConverter    dataconverter.Codec
 	logger           *zap.Logger
 }
 
 func NewActivityTaskExecutor(
 	activityRegistry *registry.ActivityRegistry,
-	dataConverter dataconverter.DataConverter,
+	dataConverter dataconverter.Codec,
 	logger *zap.Logger,
 ) ActivityTaskExecutor {
 	return &activityTaskExecutor{

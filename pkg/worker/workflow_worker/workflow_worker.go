@@ -23,7 +23,7 @@ func NewWorkflowWorker(
 	name string,
 	be backend.Backend,
 	registry *registry.WorkflowRegistry,
-	dataConverter dataconverter.DataConverter,
+	dataConverter dataconverter.Codec,
 	logger *zap.Logger,
 	opts ...func(options *WorkflowWorkerOptions),
 ) *WorkflowWorker {

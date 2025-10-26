@@ -20,7 +20,7 @@ var ErrNonDeterministicError = errors.New("non-deterministic error")
 type WorkflowRuntime struct {
 	// init
 	WorkflowRegistry *registry.WorkflowRegistry
-	DataConverter    dataconverter.DataConverter
+	DataConverter    dataconverter.Codec
 	// workflow task
 	Task *task.WorkflowTask
 	// runtime state
@@ -44,7 +44,7 @@ type WorkflowRuntime struct {
 
 func NewWorkflowRuntime(
 	workflowRegistry *registry.WorkflowRegistry,
-	dataConverter dataconverter.DataConverter,
+	dataConverter dataconverter.Codec,
 	task *task.WorkflowTask,
 ) *WorkflowRuntime {
 	return &WorkflowRuntime{

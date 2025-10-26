@@ -3,7 +3,8 @@ package base
 import (
 	"context"
 	"errors"
-	"github.com/tuannh982/simple-workflow-go/pkg/backend/psql/persistent/uow"
+
+	"github.com/tuannh982/simple-workflow-go/pkg/backend/persistent/uow"
 	"gorm.io/gorm"
 )
 

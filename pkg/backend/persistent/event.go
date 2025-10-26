@@ -2,9 +2,10 @@ package persistent
 
 import (
 	"context"
-	"github.com/tuannh982/simple-workflow-go/pkg/backend/psql/persistent/base"
-	"gorm.io/gorm"
 	"time"
+
+	"github.com/tuannh982/simple-workflow-go/pkg/backend/persistent/base"
+	"gorm.io/gorm"
 )
 
 type Event struct {

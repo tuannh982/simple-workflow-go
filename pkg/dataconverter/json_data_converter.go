@@ -4,7 +4,7 @@ import "encoding/json"
 
 type JsonDataConverter struct{}
 
-func NewJsonDataConverter() DataConverter {
+func NewJsonDataConverter() Codec {
 	return &JsonDataConverter{}
 }
 

@@ -16,13 +16,13 @@ type WorkflowTaskExecutor interface {
 
 type workflowTaskExecutor struct {
 	workflowRegistry *registry.WorkflowRegistry
-	dataConverter    dataconverter.DataConverter
+	dataConverter    dataconverter.Codec
 	logger           *zap.Logger
 }
 
 func NewWorkflowTaskExecutor(
 	workflowRegistry *registry.WorkflowRegistry,
-	dataConverter dataconverter.DataConverter,
+	dataConverter dataconverter.Codec,
 	logger *zap.Logger,
 ) WorkflowTaskExecutor {
 	return &workflowTaskExecutor{

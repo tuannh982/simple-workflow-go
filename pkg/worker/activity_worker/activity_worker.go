@@ -23,7 +23,7 @@ func NewActivityWorker(
 	name string,
 	be backend.Backend,
 	registry *registry.ActivityRegistry,
-	dataConverter dataconverter.DataConverter,
+	dataConverter dataconverter.Codec,
 	logger *zap.Logger,
 	opts ...func(options *ActivityWorkerOptions),
 ) *ActivityWorker {
