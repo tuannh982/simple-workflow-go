@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/tuannh982/simple-workflow-go/pkg/backend"
-	persistent2 "github.com/tuannh982/simple-workflow-go/pkg/backend/persistent"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend/persistent"
 	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
@@ -23,10 +23,10 @@ func NewPSQLBackend(
 	db *gorm.DB,
 	logger *zap.Logger,
 ) backend.Backend {
-	workflowRepo := persistent2.NewWorkflowRepository(db)
-	historyEventRepo := persistent2.NewHistoryEventRepository(db)
-	taskRepo := persistent2.NewTaskRepository(db)
-	eventRepo := persistent2.NewEventRepository(db)
+	workflowRepo := persistent.NewWorkflowRepository(db)
+	historyEventRepo := persistent.NewHistoryEventRepository(db)
+	taskRepo := persistent.NewTaskRepository(db)
+	eventRepo := persistent.NewEventRepository(db)
 	return &backend.SimpleWorkflowGoBackend{
 		LockedBy:               lockedBy,
 		LockExpirationDuration: lockExpirationDuration,
@@ -47,10 +47,10 @@ type PostgresDB struct{}
 // Prepare only use for testing, don't use this function in production!. You should manually create tables instead
 func (pg *PostgresDB) Prepare(db *gorm.DB) error {
 	err := db.AutoMigrate(
-		&persistent2.Event{},
-		&persistent2.HistoryEvent{},
-		&persistent2.Task{},
-		&persistent2.Workflow{},
+		&persistent.Event{},
+		&persistent.HistoryEvent{},
+		&persistent.Task{},
+		&persistent.Workflow{},
 	)
 	return err
 }

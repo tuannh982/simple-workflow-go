@@ -4,15 +4,16 @@
 package psql
 
 import (
+	"log"
+	"os"
+	"time"
+
 	"github.com/tuannh982/simple-workflow-go/pkg/backend"
-	"github.com/tuannh982/simple-workflow-go/pkg/backend/psql"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend/db"
 	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"log"
-	"os"
-	"time"
 )
 
 const (
@@ -38,20 +39,20 @@ var (
 	}
 )
 
-func InitBackend(logger *zap.Logger) (backend.Backend, error) {
+func InitBackend(psql db.PostgresDB, logger *zap.Logger) (backend.Backend, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, err
 	}
-	db, err := psql.Connect(DbHost, DbPort, DbUser, DbPassword, DbName, gormConfig)
+	database, err := psql.Connect(db.ConnectionDetails{Host: DbHost, Port: DbPort, Username: DbUser, Password: DbPassword, Database: DbName})
 	if err != nil {
 		return nil, err
 	}
-	err = psql.PrepareDB(db) // auto-create table if not exists
+	err = psql.Prepare(database) // auto-create table if not exists
 	if err != nil {
 		return nil, err
 	}
 	dataConverter := dataconverter.NewJsonDataConverter()
-	be := psql.NewPSQLBackend(hostname, 5*time.Minute, dataConverter, db, logger)
+	be := db.NewPSQLBackend(hostname, 5*time.Minute, dataConverter, database, logger)
 	return be, nil
 }

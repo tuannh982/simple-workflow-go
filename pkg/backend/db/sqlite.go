@@ -27,7 +27,7 @@ func (s *SQLiteDB) Truncate(db *gorm.DB) error {
 }
 
 func (s *SQLiteDB) Connect(c ConnectionDetails) (*gorm.DB, error) {
-	connStr := fmt.Sprintf(c.Database) // is of the form "test.db"
+	connStr := fmt.Sprintf("%s", c.Database) // is of the form "test.db"
 	if c.Config == nil {
 		c.Config = nil
 	}

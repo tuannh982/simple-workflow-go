@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"flag"
+	"time"
+
 	"github.com/tuannh982/simple-workflow-go/examples"
 	"github.com/tuannh982/simple-workflow-go/examples/subscription_with_debug"
 	"github.com/tuannh982/simple-workflow-go/pkg/api/client"
 	"github.com/tuannh982/simple-workflow-go/pkg/api/debug"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend/db"
 	"go.uber.org/zap"
-	"time"
 )
 
 var (
@@ -34,7 +36,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	be, err := examples.InitPSQLBackend(logger)
+	be, err := examples.InitPSQLBackend(db.PostgresDB{}, logger)
 	if err != nil {
 		panic(err)
 	}

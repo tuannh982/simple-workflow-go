@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	persistent2 "github.com/tuannh982/simple-workflow-go/pkg/backend/persistent"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend/persistent"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend/persistent/base"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend/persistent/uow"
 	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
@@ -41,10 +41,10 @@ type SimpleWorkflowGoBackend struct {
 	LockExpirationDuration time.Duration
 	Codec                  dataconverter.Codec
 	DB                     *gorm.DB
-	WorkflowRepo           persistent2.WorkflowRepository
-	HistoryEventRepo       persistent2.HistoryEventRepository
-	TaskRepo               persistent2.TaskRepository
-	EventRepo              persistent2.EventRepository
+	WorkflowRepo           persistent.WorkflowRepository
+	HistoryEventRepo       persistent.HistoryEventRepository
+	TaskRepo               persistent.TaskRepository
+	EventRepo              persistent.EventRepository
 	Logger                 *zap.Logger
 	WorkflowTaskMu         *sync.Mutex
 	ActivityTaskMu         *sync.Mutex
@@ -90,7 +90,7 @@ func (b *SimpleWorkflowGoBackend) CreateWorkflow(ctx context.Context, info *hist
 		if info.ParentWorkflowInfo != nil {
 			parentWorkflowID = info.ParentWorkflowInfo.WorkflowID
 		}
-		workflow := persistent2.Workflow{
+		workflow := persistent.Workflow{
 			ID:                   info.WorkflowID,
 			Name:                 info.Name,
 			Version:              info.Version,
@@ -99,9 +99,9 @@ func (b *SimpleWorkflowGoBackend) CreateWorkflow(ctx context.Context, info *hist
 			Input:                info.Input,
 			ParentWorkflowID:     &parentWorkflowID,
 		}
-		workflowTask := persistent2.Task{
+		workflowTask := persistent.Task{
 			WorkflowID: info.WorkflowID,
-			TaskID:     persistent2.WorkflowTaskID,
+			TaskID:     persistent.WorkflowTaskID,
 			TaskType:   string(task.TaskTypeWorkflow),
 			CreatedAt:  currentTimestampUTC,
 			VisibleAt:  info.ScheduleToStartTimestamp,
@@ -115,7 +115,7 @@ func (b *SimpleWorkflowGoBackend) CreateWorkflow(ctx context.Context, info *hist
 		if err != nil {
 			return err
 		}
-		event := persistent2.Event{
+		event := persistent.Event{
 			WorkflowID: info.WorkflowID,
 			EventID:    b.newUuidString(),
 			CreatedAt:  currentTimestampUTC,
@@ -128,7 +128,7 @@ func (b *SimpleWorkflowGoBackend) CreateWorkflow(ctx context.Context, info *hist
 		if err = b.TaskRepo.InsertTask(uowCtx, &workflowTask); err != nil {
 			return err
 		}
-		if err = b.EventRepo.InsertEvents(uowCtx, []*persistent2.Event{&event}); err != nil {
+		if err = b.EventRepo.InsertEvents(uowCtx, []*persistent.Event{&event}); err != nil {
 			return err
 		}
 		return nil
@@ -172,17 +172,17 @@ func (b *SimpleWorkflowGoBackend) AppendWorkflowEvent(ctx context.Context, workf
 		if err != nil {
 			return err
 		}
-		e := persistent2.Event{
+		e := persistent.Event{
 			WorkflowID: workflowID,
 			EventID:    b.newUuidString(),
 			CreatedAt:  currentTimestampUTC,
 			VisibleAt:  event.Timestamp,
 			Payload:    historyEventBytes,
 		}
-		if err = b.EventRepo.InsertEvents(uowCtx, []*persistent2.Event{&e}); err != nil {
+		if err = b.EventRepo.InsertEvents(uowCtx, []*persistent.Event{&e}); err != nil {
 			return err
 		}
-		if err = b.TaskRepo.ResetTaskLastTouchTimestamp(uowCtx, workflowID, persistent2.WorkflowTaskID); err != nil {
+		if err = b.TaskRepo.ResetTaskLastTouchTimestamp(uowCtx, workflowID, persistent.WorkflowTaskID); err != nil {
 			return err
 		}
 		return nil
@@ -210,7 +210,7 @@ func (b *SimpleWorkflowGoBackend) GetWorkflowHistory(ctx context.Context, workfl
 func (b *SimpleWorkflowGoBackend) GetWorkflowTask(ctx context.Context) (result *task.WorkflowTask, err error) {
 	b.WorkflowTaskMu.Lock()
 	defer b.WorkflowTaskMu.Unlock()
-	var t *persistent2.Task
+	var t *persistent.Task
 	tx := b.DB.Begin()
 	defer func() {
 		if err != nil {
@@ -320,13 +320,13 @@ func (b *SimpleWorkflowGoBackend) CompleteWorkflowTask(ctx context.Context, resu
 		if _, err = b.EventRepo.DeleteEventsByWorkflowIDAndHeldBy(uowCtx, result.Task.WorkflowID, b.LockedBy); err != nil {
 			return err
 		}
-		historyEvents := make([]*persistent2.HistoryEvent, len(processedEvents))
+		historyEvents := make([]*persistent.HistoryEvent, len(processedEvents))
 		for i, event := range processedEvents {
 			bytes, err := b.Codec.Marshal(event)
 			if err != nil {
 				return err
 			}
-			historyEvents[i] = &persistent2.HistoryEvent{
+			historyEvents[i] = &persistent.HistoryEvent{
 				WorkflowID:     result.Task.WorkflowID,
 				EventID:        b.newUuidString(),
 				EventTimestamp: event.Timestamp,
@@ -337,8 +337,8 @@ func (b *SimpleWorkflowGoBackend) CompleteWorkflowTask(ctx context.Context, resu
 			return err
 		}
 		// build new events list
-		pendingTasks := make([]*persistent2.Task, 0)
-		pendingEvents := make([]*persistent2.Event, 0)
+		pendingTasks := make([]*persistent.Task, 0)
+		pendingEvents := make([]*persistent.Event, 0)
 		shouldNotifyWorkflowTask := len(result.PendingActivities) != 0 || len(result.PendingTimers) != 0
 		for _, activityScheduled := range result.PendingActivities {
 			bytes, err := dto.Marshal(activityScheduled)
@@ -354,7 +354,7 @@ func (b *SimpleWorkflowGoBackend) CompleteWorkflowTask(ctx context.Context, resu
 			if err != nil {
 				return err
 			}
-			pendingTasks = append(pendingTasks, &persistent2.Task{
+			pendingTasks = append(pendingTasks, &persistent.Task{
 				WorkflowID: result.Task.WorkflowID,
 				TaskID:     taskID,
 				TaskType:   string(task.TaskTypeActivity),
@@ -362,7 +362,7 @@ func (b *SimpleWorkflowGoBackend) CompleteWorkflowTask(ctx context.Context, resu
 				VisibleAt:  currentTimestampUTC,
 				Payload:    bytes,
 			})
-			pendingEvents = append(pendingEvents, &persistent2.Event{
+			pendingEvents = append(pendingEvents, &persistent.Event{
 				WorkflowID: result.Task.WorkflowID,
 				EventID:    taskID,
 				CreatedAt:  currentTimestampUTC,
@@ -379,7 +379,7 @@ func (b *SimpleWorkflowGoBackend) CompleteWorkflowTask(ctx context.Context, resu
 			if err != nil {
 				return err
 			}
-			pendingEvents = append(pendingEvents, &persistent2.Event{
+			pendingEvents = append(pendingEvents, &persistent.Event{
 				WorkflowID: result.Task.WorkflowID,
 				EventID:    b.newUuidString(),
 				CreatedAt:  currentTimestampUTC,
@@ -394,7 +394,7 @@ func (b *SimpleWorkflowGoBackend) CompleteWorkflowTask(ctx context.Context, resu
 			if err != nil {
 				return err
 			}
-			pendingEvents = append(pendingEvents, &persistent2.Event{
+			pendingEvents = append(pendingEvents, &persistent.Event{
 				WorkflowID: result.Task.WorkflowID,
 				EventID:    b.newUuidString(),
 				CreatedAt:  currentTimestampUTC,
@@ -412,7 +412,7 @@ func (b *SimpleWorkflowGoBackend) CompleteWorkflowTask(ctx context.Context, resu
 				if err != nil {
 					return err
 				}
-				pendingEvents = append(pendingEvents, &persistent2.Event{
+				pendingEvents = append(pendingEvents, &persistent.Event{
 					WorkflowID: result.Task.WorkflowID,
 					EventID:    b.newUuidString(),
 					CreatedAt:  currentTimestampUTC,
@@ -432,7 +432,7 @@ func (b *SimpleWorkflowGoBackend) CompleteWorkflowTask(ctx context.Context, resu
 				return err
 			}
 		} else if shouldNotifyWorkflowTask {
-			if err = b.TaskRepo.ResetTaskLastTouchTimestamp(uowCtx, result.Task.WorkflowID, persistent2.WorkflowTaskID); err != nil {
+			if err = b.TaskRepo.ResetTaskLastTouchTimestamp(uowCtx, result.Task.WorkflowID, persistent.WorkflowTaskID); err != nil {
 				return err
 			}
 		}
@@ -466,7 +466,7 @@ func (b *SimpleWorkflowGoBackend) GetActivityTask(ctx context.Context) (result *
 	b.ActivityTaskMu.Lock()
 	defer b.ActivityTaskMu.Unlock()
 	tx := b.DB.Begin()
-	var t *persistent2.Task
+	var t *persistent.Task
 	defer func() {
 		if err != nil {
 			tx.Rollback()
@@ -535,7 +535,7 @@ func (b *SimpleWorkflowGoBackend) CompleteActivityTask(ctx context.Context, resu
 		if err != nil {
 			return err
 		}
-		event := persistent2.Event{
+		event := persistent.Event{
 			WorkflowID: result.Task.WorkflowID,
 			EventID:    b.newUuidString(),
 			CreatedAt:  currentTimestampUTC,
@@ -545,10 +545,10 @@ func (b *SimpleWorkflowGoBackend) CompleteActivityTask(ctx context.Context, resu
 		if err = b.TaskRepo.DeleteTask(uowCtx, result.Task.WorkflowID, result.Task.TaskID, task.TaskTypeActivity, b.LockedBy); err != nil {
 			return err
 		}
-		if err = b.EventRepo.InsertEvents(uowCtx, []*persistent2.Event{&event}); err != nil {
+		if err = b.EventRepo.InsertEvents(uowCtx, []*persistent.Event{&event}); err != nil {
 			return err
 		}
-		if err = b.TaskRepo.ResetTaskLastTouchTimestamp(uowCtx, result.Task.WorkflowID, persistent2.WorkflowTaskID); err != nil {
+		if err = b.TaskRepo.ResetTaskLastTouchTimestamp(uowCtx, result.Task.WorkflowID, persistent.WorkflowTaskID); err != nil {
 			return err
 		}
 		return nil
