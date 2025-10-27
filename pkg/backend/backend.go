@@ -11,7 +11,7 @@ import (
 	"github.com/tuannh982/simple-workflow-go/pkg/backend/persistent"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend/persistent/base"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend/persistent/uow"
-	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflow-go/pkg/codec"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/history"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
@@ -22,7 +22,7 @@ import (
 )
 
 type Backend interface {
-	DataConverter() dataconverter.Codec
+	DataConverter() codec.Codec
 	CreateWorkflow(ctx context.Context, info *history.WorkflowExecutionStarted) error
 	GetWorkflowResult(ctx context.Context, name string, workflowID string) (*dto.WorkflowExecutionResult, error)
 	AppendWorkflowEvent(ctx context.Context, workflowID string, event *history.HistoryEvent) error
@@ -35,12 +35,20 @@ type Backend interface {
 	AbandonActivityTask(ctx context.Context, task *task.ActivityTask, reason *string, nextExecutionTime time.Time, stateData []byte) error
 }
 
-// TODO: There are some SQL statements that might be specific to Postgres only, refactor that to be generic
+// DBType represents the type of database being used
+type DBType string
+
+const (
+	DBTypePostgres DBType = "postgres"
+	DBTypeSQLite   DBType = "sqlite"
+)
+
 type SimpleWorkflowGoBackend struct {
 	LockedBy               string
 	LockExpirationDuration time.Duration
-	Codec                  dataconverter.Codec
+	Codec                  codec.Codec
 	DB                     *gorm.DB
+	DBType                 DBType
 	WorkflowRepo           persistent.WorkflowRepository
 	HistoryEventRepo       persistent.HistoryEventRepository
 	TaskRepo               persistent.TaskRepository
@@ -50,21 +58,32 @@ type SimpleWorkflowGoBackend struct {
 	ActivityTaskMu         *sync.Mutex
 }
 
-func (b *SimpleWorkflowGoBackend) DataConverter() dataconverter.Codec {
+func (b *SimpleWorkflowGoBackend) DataConverter() codec.Codec {
 	return b.Codec
 }
 
 func (b *SimpleWorkflowGoBackend) getCurrentTimestamp(tx *gorm.DB) int64 {
 	type tsHolder struct{ timestamp int64 }
 	ts := &tsHolder{}
-	tx.Raw("SELECT CAST(EXTRACT(EPOCH FROM NOW()::timestamp) * 1000 AS BIGINT) timestamp;").Scan(ts)
+	//switch based on the type of database
+	switch b.DBType {
+	case DBTypePostgres:
+		tx.Raw("SELECT CAST(EXTRACT(EPOCH FROM NOW()::timestamp) * 1000 AS BIGINT) timestamp;").Scan(ts)
+	case DBTypeSQLite:
+		tx.Raw("SELECT CAST((strftime('%s', 'now') * 1000) AS INTEGER) AS timestamp;").Scan(ts)
+	}
 	return ts.timestamp
 }
 
 func (b *SimpleWorkflowGoBackend) createUow(ctx context.Context, tx *gorm.DB) (context.Context, error) {
-	result := tx.Exec(fmt.Sprintf("SET TRANSACTION ISOLATION LEVEL %s", base.IsolationLevelSerializable))
-	if result.Error != nil {
-		return nil, result.Error
+	switch b.DBType {
+	case DBTypePostgres:
+		result := tx.Exec(fmt.Sprintf("SET TRANSACTION ISOLATION LEVEL %s", base.IsolationLevelSerializable))
+		if result.Error != nil {
+			return nil, result.Error
+		}
+	case DBTypeSQLite:
+		//do nothing, SQLite Transactions are isolated by default - https://sqlite.org/isolation.html
 	}
 	unitOfWork := uow.NewUnitOfWork(tx)
 	uowCtx := unitOfWork.InjectCtx(ctx)
@@ -316,7 +335,7 @@ func (b *SimpleWorkflowGoBackend) CompleteWorkflowTask(ctx context.Context, resu
 		if err != nil {
 			return err
 		}
-		// delete processed events, and move them to history
+		// delete processed events and move them to history
 		if _, err = b.EventRepo.DeleteEventsByWorkflowIDAndHeldBy(uowCtx, result.Task.WorkflowID, b.LockedBy); err != nil {
 			return err
 		}
@@ -336,7 +355,7 @@ func (b *SimpleWorkflowGoBackend) CompleteWorkflowTask(ctx context.Context, resu
 		if err = b.HistoryEventRepo.InsertHistoryEvents(uowCtx, historyEvents); err != nil {
 			return err
 		}
-		// build new events list
+		// build a new events list
 		pendingTasks := make([]*persistent.Task, 0)
 		pendingEvents := make([]*persistent.Event, 0)
 		shouldNotifyWorkflowTask := len(result.PendingActivities) != 0 || len(result.PendingTimers) != 0
@@ -403,7 +422,7 @@ func (b *SimpleWorkflowGoBackend) CompleteWorkflowTask(ctx context.Context, resu
 			})
 		}
 		if result.WorkflowExecutionCompleted != nil {
-			if !isCompleted { // WorkflowExecutionCompleted is not in processed event list
+			if !isCompleted { // WorkflowExecutionCompleted is not in the processed event list
 				he := &history.HistoryEvent{
 					Timestamp:                  currentTimestampUTC,
 					WorkflowExecutionCompleted: result.WorkflowExecutionCompleted,

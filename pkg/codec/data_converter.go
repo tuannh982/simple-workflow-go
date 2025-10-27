@@ -1,4 +1,4 @@
-package dataconverter
+package codec
 
 type Codec interface {
 	Unmarshal(data []byte, v any) error

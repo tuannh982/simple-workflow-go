@@ -19,7 +19,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	be, err := examples.InitPSQLBackend(db.PostgresDB{}, logger)
+	//be, err := examples.InitPSQLBackend(&db.PostgresDB{}, logger)
+	be, err := examples.InitSQLiteBackend(&db.SQLiteDB{}, logger)
+
 	if err != nil {
 		panic(err)
 	}

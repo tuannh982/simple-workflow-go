@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/tuannh982/simple-workflow-go/internal/fn"
-	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflow-go/pkg/codec"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/history"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
 	"github.com/tuannh982/simple-workflow-go/pkg/registry"
@@ -13,7 +13,7 @@ import (
 	"testing"
 )
 
-var dataConverter = dataconverter.NewJsonDataConverter()
+var dataConverter = codec.NewJSONCodec()
 
 type mockInput struct {
 	Msg string

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend"
-	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflow-go/pkg/codec"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/history"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
@@ -19,13 +19,13 @@ import (
 )
 
 type mockBackend struct {
-	dataConverter  dataconverter.Codec
+	dataConverter  codec.Codec
 	persistent     *MockPersistent
 	thisInstanceID string
 	*sync.Mutex
 }
 
-func NewMockBackend(dataConverter dataconverter.Codec) backend.Backend {
+func NewMockBackend(dataConverter codec.Codec) backend.Backend {
 	hostname, err := os.Hostname()
 	if err != nil {
 		panic(err)
@@ -40,7 +40,7 @@ func NewMockBackend(dataConverter dataconverter.Codec) backend.Backend {
 	}
 }
 
-func (m *mockBackend) DataConverter() dataconverter.Codec {
+func (m *mockBackend) DataConverter() codec.Codec {
 	return m.dataConverter
 }
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/tuannh982/simple-workflow-go/internal/workflow"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend"
-	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflow-go/pkg/codec"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
 	"github.com/tuannh982/simple-workflow-go/pkg/registry"
 	"github.com/tuannh982/simple-workflow-go/pkg/utils/worker"
@@ -23,7 +23,7 @@ func NewWorkflowWorker(
 	name string,
 	be backend.Backend,
 	registry *registry.WorkflowRegistry,
-	dataConverter dataconverter.Codec,
+	dataConverter codec.Codec,
 	logger *zap.Logger,
 	opts ...func(options *WorkflowWorkerOptions),
 ) *WorkflowWorker {

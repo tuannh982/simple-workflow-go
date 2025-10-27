@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/tuannh982/simple-workflow-go/internal/fn"
-	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflow-go/pkg/codec"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/history"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
@@ -20,7 +20,7 @@ var ErrNonDeterministicError = errors.New("non-deterministic error")
 type WorkflowRuntime struct {
 	// init
 	WorkflowRegistry *registry.WorkflowRegistry
-	DataConverter    dataconverter.Codec
+	DataConverter    codec.Codec
 	// workflow task
 	Task *task.WorkflowTask
 	// runtime state
@@ -44,7 +44,7 @@ type WorkflowRuntime struct {
 
 func NewWorkflowRuntime(
 	workflowRegistry *registry.WorkflowRegistry,
-	dataConverter dataconverter.Codec,
+	dataConverter codec.Codec,
 	task *task.WorkflowTask,
 ) *WorkflowRuntime {
 	return &WorkflowRuntime{

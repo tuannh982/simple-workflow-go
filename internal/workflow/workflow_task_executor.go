@@ -3,7 +3,7 @@ package workflow
 import (
 	"context"
 	"errors"
-	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflow-go/pkg/codec"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/history"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
 	"github.com/tuannh982/simple-workflow-go/pkg/registry"
@@ -16,13 +16,13 @@ type WorkflowTaskExecutor interface {
 
 type workflowTaskExecutor struct {
 	workflowRegistry *registry.WorkflowRegistry
-	dataConverter    dataconverter.Codec
+	dataConverter    codec.Codec
 	logger           *zap.Logger
 }
 
 func NewWorkflowTaskExecutor(
 	workflowRegistry *registry.WorkflowRegistry,
-	dataConverter dataconverter.Codec,
+	dataConverter codec.Codec,
 	logger *zap.Logger,
 ) WorkflowTaskExecutor {
 	return &workflowTaskExecutor{

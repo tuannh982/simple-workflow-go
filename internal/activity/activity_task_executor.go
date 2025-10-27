@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/tuannh982/simple-workflow-go/internal/fn"
-	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflow-go/pkg/codec"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
 	"github.com/tuannh982/simple-workflow-go/pkg/registry"
@@ -18,13 +18,13 @@ type ActivityTaskExecutor interface {
 
 type activityTaskExecutor struct {
 	activityRegistry *registry.ActivityRegistry
-	dataConverter    dataconverter.Codec
+	dataConverter    codec.Codec
 	logger           *zap.Logger
 }
 
 func NewActivityTaskExecutor(
 	activityRegistry *registry.ActivityRegistry,
-	dataConverter dataconverter.Codec,
+	dataConverter codec.Codec,
 	logger *zap.Logger,
 ) ActivityTaskExecutor {
 	return &activityTaskExecutor{
