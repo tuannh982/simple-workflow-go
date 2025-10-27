@@ -20,6 +20,10 @@ First, start PSQL server locally
 ```shell
 docker compose -f docker/docker-compose-psql.yaml up -d
 ```
+If using an SQLite Database instead, then create a sqlite database in the working director 
+```shell
+touch test.db
+```
 
 Then, init a backend instance that connect to PSQL server
 
@@ -32,21 +36,21 @@ const (
     DbPassword = "123456"
 )
 
-func InitPSQLBackend(logger *zap.Logger) (backend.Backend, error) {
+func InitPSQLBackend(psql *db.PostgresDB, logger *zap.Logger) (backend.Backend, error) {
     hostname, err := os.Hostname()
     if err != nil {
         return nil, err
     }
-    db, err := psql.Connect(DbHost, DbPort, DbUser, DbPassword, DbName, nil)
+    err = psql.Connect(db.ConnectionDetails{Host: DbHost, Port: DbPort, Username: DbUser, Password: DbPassword, DatabaseName: DbName})
     if err != nil {
         return nil, err
     }
-    err = psql.PrepareDB(db) // auto-create table if not exists
+    err = psql.Prepare() // auto-create table if not exists
     if err != nil {
         return nil, err
     }
-    dataConverter := dataconverter.NewJsonDataConverter()
-    be := psql.NewPSQLBackend(hostname, 5*time.Minute, dataConverter, db, logger)
+    dataConverter := codec.NewJSONCodec()
+    be := backend.NewPSQLBackend(hostname, 5*time.Minute, dataConverter, *psql, logger)
     return be, nil
 }
 ```
@@ -54,6 +58,8 @@ func InitPSQLBackend(logger *zap.Logger) (backend.Backend, error) {
 ```go
 be, err := examples.InitPSQLBackend(logger)
 ```
+To use an SQLite Database instead, we can replace `backend.NewPSQLBackend(...)` with `db.NewSQLiteBackend(...)` with appropriate params.
+
 
 ### Activities
 Activity is a function that used to implement service calls, I/O operation, 

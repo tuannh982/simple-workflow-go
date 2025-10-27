@@ -4,47 +4,18 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 	"time"
 
-	"github.com/tuannh982/simple-workflow-go/pkg/backend"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend/persistent"
-	"github.com/tuannh982/simple-workflow-go/pkg/codec"
-	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
-func NewPSQLBackend(
-	lockedBy string,
-	lockExpirationDuration time.Duration,
-	codec codec.Codec,
-	psqlDB PostgresDB,
-	logger *zap.Logger,
-) backend.Backend {
-	workflowRepo := persistent.NewWorkflowRepository(psqlDB.database)
-	historyEventRepo := persistent.NewHistoryEventRepository(psqlDB.database)
-	taskRepo := persistent.NewTaskRepository(psqlDB.database)
-	eventRepo := persistent.NewEventRepository(psqlDB.database)
-	return &backend.SimpleWorkflowGoBackend{
-		LockedBy:               lockedBy,
-		LockExpirationDuration: lockExpirationDuration,
-		Codec:                  codec,
-		DB:                     psqlDB.database,
-		DBType:                 backend.DBTypePostgres,
-		WorkflowRepo:           workflowRepo,
-		HistoryEventRepo:       historyEventRepo,
-		TaskRepo:               taskRepo,
-		EventRepo:              eventRepo,
-		Logger:                 logger,
-		WorkflowTaskMu:         &sync.Mutex{},
-		ActivityTaskMu:         &sync.Mutex{},
-	}
-}
+const PostgresDBType = "postgres"
 
 type PostgresDB struct {
-	database *gorm.DB
+	Database *gorm.DB
 }
 
 func (pg *PostgresDB) Type() DatabaseType {
@@ -53,7 +24,7 @@ func (pg *PostgresDB) Type() DatabaseType {
 
 // Prepare only use for testing, don't use this function in production!. You should manually create tables instead
 func (pg *PostgresDB) Prepare() error {
-	err := pg.database.AutoMigrate(
+	err := pg.Database.AutoMigrate(
 		&persistent.Event{},
 		&persistent.HistoryEvent{},
 		&persistent.Task{},
@@ -64,7 +35,7 @@ func (pg *PostgresDB) Prepare() error {
 
 // Truncate only use for testing, don't use this function in production!
 func (pg *PostgresDB) Truncate(db *gorm.DB) error {
-	return pg.database.Transaction(func(tx *gorm.DB) error {
+	return pg.Database.Transaction(func(tx *gorm.DB) error {
 		tx.Exec("TRUNCATE TABLE events")
 		tx.Exec("TRUNCATE TABLE history_events")
 		tx.Exec("TRUNCATE TABLE tasks")
@@ -96,7 +67,7 @@ func (pg *PostgresDB) Connect(c ConnectionDetails) error {
 		c.Config = DefaultConnectConfig
 	}
 	d, err := gorm.Open(postgres.Open(connStr), c.Config)
-	pg.database = d
+	pg.Database = d
 	if err != nil {
 		return err
 	}

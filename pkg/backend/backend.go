@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend/db"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend/persistent"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend/persistent/base"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend/persistent/uow"
@@ -36,19 +37,13 @@ type Backend interface {
 }
 
 // DBType represents the type of database being used
-type DBType string
-
-const (
-	DBTypePostgres DBType = "postgres"
-	DBTypeSQLite   DBType = "sqlite"
-)
 
 type SimpleWorkflowGoBackend struct {
 	LockedBy               string
 	LockExpirationDuration time.Duration
 	Codec                  codec.Codec
 	DB                     *gorm.DB
-	DBType                 DBType
+	DBType                 db.DatabaseType
 	WorkflowRepo           persistent.WorkflowRepository
 	HistoryEventRepo       persistent.HistoryEventRepository
 	TaskRepo               persistent.TaskRepository
@@ -67,9 +62,9 @@ func (b *SimpleWorkflowGoBackend) getCurrentTimestamp(tx *gorm.DB) int64 {
 	ts := &tsHolder{}
 	//switch based on the type of database
 	switch b.DBType {
-	case DBTypePostgres:
+	case db.PostgresDBType:
 		tx.Raw("SELECT CAST(EXTRACT(EPOCH FROM NOW()::timestamp) * 1000 AS BIGINT) timestamp;").Scan(ts)
-	case DBTypeSQLite:
+	case db.SQLiteDBType:
 		tx.Raw("SELECT CAST((strftime('%s', 'now') * 1000) AS INTEGER) AS timestamp;").Scan(ts)
 	}
 	return ts.timestamp
@@ -77,12 +72,12 @@ func (b *SimpleWorkflowGoBackend) getCurrentTimestamp(tx *gorm.DB) int64 {
 
 func (b *SimpleWorkflowGoBackend) createUow(ctx context.Context, tx *gorm.DB) (context.Context, error) {
 	switch b.DBType {
-	case DBTypePostgres:
+	case db.PostgresDBType:
 		result := tx.Exec(fmt.Sprintf("SET TRANSACTION ISOLATION LEVEL %s", base.IsolationLevelSerializable))
 		if result.Error != nil {
 			return nil, result.Error
 		}
-	case DBTypeSQLite:
+	case db.SQLiteDBType:
 		//do nothing, SQLite Transactions are isolated by default - https://sqlite.org/isolation.html
 	}
 	unitOfWork := uow.NewUnitOfWork(tx)
@@ -592,4 +587,52 @@ func (b *SimpleWorkflowGoBackend) AbandonActivityTask(ctx context.Context, t *ta
 		return b.TaskRepo.ReleaseTask(uowCtx, t.WorkflowID, t.TaskID, task.TaskTypeActivity, b.LockedBy, reason, &nextScheduleTimestamp, stateData)
 	})
 	return HandleSQLError(err)
+}
+
+func NewPSQLBackend(
+	lockedBy string,
+	lockExpirationDuration time.Duration,
+	codec codec.Codec,
+	psqlDB db.PostgresDB,
+	logger *zap.Logger,
+) Backend {
+	workflowRepo := persistent.NewWorkflowRepository(psqlDB.Database)
+	historyEventRepo := persistent.NewHistoryEventRepository(psqlDB.Database)
+	taskRepo := persistent.NewTaskRepository(psqlDB.Database)
+	eventRepo := persistent.NewEventRepository(psqlDB.Database)
+	return &SimpleWorkflowGoBackend{
+		LockedBy:               lockedBy,
+		LockExpirationDuration: lockExpirationDuration,
+		Codec:                  codec,
+		DB:                     psqlDB.Database,
+		DBType:                 db.PostgresDBType,
+		WorkflowRepo:           workflowRepo,
+		HistoryEventRepo:       historyEventRepo,
+		TaskRepo:               taskRepo,
+		EventRepo:              eventRepo,
+		Logger:                 logger,
+		WorkflowTaskMu:         &sync.Mutex{},
+		ActivityTaskMu:         &sync.Mutex{},
+	}
+}
+
+func NewSQLiteBackend(lockedBy string, lockExpirationDuration time.Duration, codec codec.Codec, sqliteDB db.SQLiteDB, logger *zap.Logger) Backend {
+	workflowRepo := persistent.NewWorkflowRepository(sqliteDB.Database)
+	historyEventRepo := persistent.NewHistoryEventRepository(sqliteDB.Database)
+	taskRepo := persistent.NewTaskRepository(sqliteDB.Database)
+	eventRepo := persistent.NewEventRepository(sqliteDB.Database)
+	return &SimpleWorkflowGoBackend{
+		LockedBy:               lockedBy,
+		LockExpirationDuration: lockExpirationDuration,
+		Codec:                  codec,
+		DB:                     sqliteDB.Database,
+		DBType:                 db.SQLiteDBType,
+		WorkflowRepo:           workflowRepo,
+		HistoryEventRepo:       historyEventRepo,
+		TaskRepo:               taskRepo,
+		EventRepo:              eventRepo,
+		Logger:                 logger,
+		WorkflowTaskMu:         &sync.Mutex{},
+		ActivityTaskMu:         &sync.Mutex{},
+	}
 }

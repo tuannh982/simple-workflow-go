@@ -34,7 +34,7 @@ func InitPSQLBackend(psql *db.PostgresDB, logger *zap.Logger) (backend.Backend, 
 		return nil, err
 	}
 	dataConverter := codec.NewJSONCodec()
-	be := db.NewPSQLBackend(hostname, 5*time.Minute, dataConverter, *psql, logger)
+	be := backend.NewPSQLBackend(hostname, 5*time.Minute, dataConverter, *psql, logger)
 	return be, nil
 }
 
@@ -47,7 +47,7 @@ func InitSQLiteBackend(sqlite *db.SQLiteDB, logger *zap.Logger) (backend.Backend
 	if err != nil {
 		return nil, err
 	}
-	err = sqlite.Connect(db.ConnectionDetails{DatabaseName: path.Join(wd, "test.db"), Config: nil})
+	err = sqlite.Connect(db.ConnectionDetails{DatabaseName: path.Join(wd, "..", "test.db"), Config: nil})
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +56,6 @@ func InitSQLiteBackend(sqlite *db.SQLiteDB, logger *zap.Logger) (backend.Backend
 		return nil, err
 	}
 	dataConverter := codec.NewJSONCodec()
-	be := db.NewSQLiteBackend(hostname, 5*time.Minute, dataConverter, *sqlite, logger)
+	be := backend.NewSQLiteBackend(hostname, 5*time.Minute, dataConverter, *sqlite, logger)
 	return be, nil
 }

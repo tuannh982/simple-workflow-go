@@ -1,14 +1,10 @@
 package db
 
-import "gorm.io/gorm"
-
-type DatabaseType string
-
-const (
-	PostgresDBType DatabaseType = "postgres"
-	SQLiteDBType   DatabaseType = "sqlite"
+import (
+	"gorm.io/gorm"
 )
 
+type DatabaseType string
 type ConnectionDetails struct {
 	Host         string
 	Port         int

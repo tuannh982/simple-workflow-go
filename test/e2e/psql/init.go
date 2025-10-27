@@ -53,6 +53,6 @@ func InitBackend(psql db.PostgresDB, logger *zap.Logger) (backend.Backend, error
 		return nil, err
 	}
 	dataConverter := codec.NewJSONCodec()
-	be := db.NewPSQLBackend(hostname, 5*time.Minute, dataConverter, psql.database, logger)
+	be := backend.NewPSQLBackend(hostname, 5*time.Minute, dataConverter, psql.database, logger)
 	return be, nil
 }
