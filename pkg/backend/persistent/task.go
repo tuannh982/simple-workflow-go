@@ -3,12 +3,13 @@ package persistent
 import (
 	"context"
 	"errors"
+	"time"
+
 	"github.com/google/uuid"
-	"github.com/tuannh982/simple-workflow-go/pkg/backend/psql/persistent/base"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend/persistent/base"
 	"github.com/tuannh982/simple-workflow-go/pkg/dto/task"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"time"
 )
 
 var ErrTaskLost = errors.New("task lost")

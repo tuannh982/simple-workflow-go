@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/tuannh982/simple-workflow-go/pkg/api/workflow"
 	"github.com/tuannh982/simple-workflow-go/pkg/backend"
-	"github.com/tuannh982/simple-workflow-go/pkg/dataconverter"
+	"github.com/tuannh982/simple-workflow-go/pkg/codec"
 	"github.com/tuannh982/simple-workflow-go/pkg/registry"
 	"github.com/tuannh982/simple-workflow-go/pkg/worker/activity_worker"
 	"github.com/tuannh982/simple-workflow-go/pkg/worker/workflow_worker"
@@ -43,7 +43,7 @@ func mockWorkflow1(ctx context.Context, input *mockStruct) (r *mockStruct, err e
 	return r, err
 }
 
-var dataConverter = dataconverter.NewJsonDataConverter()
+var dataConverter = codec.NewJSONCodec()
 
 func initWorkers(t *testing.T, logger *zap.Logger) (backend.Backend, *activity_worker.ActivityWorker, *workflow_worker.WorkflowWorker) {
 	var err error

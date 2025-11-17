@@ -2,14 +2,16 @@ package main
 
 import (
 	"context"
-	"github.com/tuannh982/simple-workflow-go/examples"
-	"github.com/tuannh982/simple-workflow-go/examples/subscription_with_debug"
-	"github.com/tuannh982/simple-workflow-go/pkg/api/worker"
-	"github.com/tuannh982/simple-workflow-go/pkg/worker/activity_worker"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/tuannh982/simple-workflow-go/examples"
+	"github.com/tuannh982/simple-workflow-go/examples/subscription_with_debug"
+	"github.com/tuannh982/simple-workflow-go/pkg/api/worker"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend/db"
+	"github.com/tuannh982/simple-workflow-go/pkg/worker/activity_worker"
 )
 
 func main() {
@@ -18,7 +20,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	be, err := examples.InitPSQLBackend(logger)
+	be, err := examples.InitPSQLBackend(&db.PostgresDB{}, logger)
 	if err != nil {
 		panic(err)
 	}

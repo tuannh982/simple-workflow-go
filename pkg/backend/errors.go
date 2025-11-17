@@ -1,4 +1,4 @@
-package psql
+package backend
 
 func HandleSQLError(err error) error {
 	//if err != nil {

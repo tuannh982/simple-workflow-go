@@ -6,6 +6,7 @@ import (
 	"github.com/tuannh982/simple-workflow-go/examples"
 	"github.com/tuannh982/simple-workflow-go/examples/sum2rn"
 	"github.com/tuannh982/simple-workflow-go/pkg/api/client"
+	"github.com/tuannh982/simple-workflow-go/pkg/backend/db"
 	"go.uber.org/zap"
 )
 
@@ -28,7 +29,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	be, err := examples.InitPSQLBackend(logger)
+	//be, err := examples.InitPSQLBackend(&db.PostgresDB{}, logger)
+	be, err := examples.InitSQLiteBackend(&db.SQLiteDB{}, logger)
 	if err != nil {
 		panic(err)
 	}
